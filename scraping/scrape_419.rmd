@@ -1,0 +1,164 @@
+---
+title: 'Scraping emails'
+date: 'September 9, 2022'
+author: 'Maurizio P. De Marchi'
+output:
+html_document:
+df_print: paged
+theme: readable
+toc: true
+toc_float: true
+pdf_document: default
+editor_options:
+chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE,
+                      tidy.opts = list(width.cutoff = 60),
+                      tidy = TRUE)
+library(tidyverse)
+library(stringi)
+library(rvest)
+library(DT)
+library(gsubfn)
+```
+
+```{r}
+# url_history <- "https://www.419scam.org/emails/index.htm"  # contains scam emails from 2007 to 2019
+# url_recent <- "https://www.419scam.org/emails/2022-01/index.htm" # contains scam emails from 2020 to 2022
+
+# starting_url <- "https://www.419scam.org/emails/2004-02/1/index.htm"
+max_days <- 31
+max_months <- 12
+min_years <- 2010 # 2004
+max_years <- 2022
+
+```
+```{r}
+# utility functions
+
+get_email_urls <- function(url)
+{
+  # Try to see if the page exists
+  index_page <- tryCatch(
+    read_html(url),
+    error = function(e)
+    {
+      print("Page does not exists")
+      return(NULL)
+    }
+  )
+
+  if (is.null(index_page))
+  {
+    return(0)  # the page does not exists
+  }
+
+  # search for emails.
+  # The page doesn't have any css, so the easiest thing is to search for <ul>
+  # in every page, the second <ul> corresponds to the emails
+
+  nodes <- html_elements(index_page, 'ul')[2]  # we are sure it's the second one
+  links <- html_element(nodes, 'a')  # get all links
+
+  if (is.null(unlist(links)))
+  {
+    print("No emails for that day")
+    return(0)
+  }
+
+  # add link text
+  result <- paste(html_attrs(links))
+  if(str_sub(result,start = -1, end = -1) == 't')  # sometimes there is no list, so the url ends up with "what"
+    return(0)
+  else
+    return(result)
+}
+
+get_day_dataframe <- function(base_url, mail_urls)
+{
+  day_df <- data.frame(From = '', Date = '', Subject = '', Text = '')
+  for (mail_id in mail_urls)
+  {
+    mail_url <- paste0(base_url, mail_id)
+    if(mail_url[length(mail_url)] == 't')
+      return(0)
+    page <- read_html(mail_url, options = "HUGE")
+    mail <- page %>%
+      html_element("blockquote") %>%
+      html_text()
+    from <- strapplyc(mail, "From:(.*?)Reply-To:", simplify = c)
+    if (is_empty(from))
+      from <- strapplyc(mail, "From:(.*?)Date:", simplify = c)
+    # reply <- strapplyc(mail, "Reply-To:(.*?)Date:", simplify = c)
+    date <- strapplyc(mail, "Date:(.*?)Subject:", simplify = c)
+    subj <- strapplyc(mail, "Subject:(.*?)\r\n", simplify = c) %>%
+      str_remove_all(pattern = '\r') %>%
+      str_remove_all(pattern = '\n')
+    email_text <- unlist(str_split(mail, fixed(paste0(subj,"\r\n"))))[2] %>%
+      str_remove_all(pattern = '\r') %>%
+      str_replace_all(pattern = '\n',' ')
+
+    day_df <- rbind(day_df, c(from, date, subj, email_text))
+  }
+
+  return(day_df[-1,])
+}
+```
+
+```{r}
+# scraping
+
+for (y in min_years:max_years)  # for each year between 2004 and 2022
+{
+  year_df <- data.frame(From = '', Date = '', Subject = '', Text = '')
+  print(paste("Starting Year ", y))
+  for (m in 1:max_months) # for each month
+  {
+    if (m < 10)  # for url part in month
+    { character0 <- '0' }
+    else
+    { character0 <- '' }
+
+    for (d in 1:max_days)  #for each day  NB: this will cause problems, but it's bettwe than navigating the url page
+    {
+      if (d < 10)  # for url part in month
+      { character1 <- '0' }
+      else
+      { character1 <- '' }
+
+      # download page
+      base_url <- paste0("https://www.419scam.org/emails/", y, "-", character0, m, '/', character1, d, "/")
+      index_url <- paste0(base_url,"index.htm")
+
+      e <- FALSE
+      # get email lists
+
+      email_refs <- get_email_urls(index_url)
+      if (email_refs == 0)
+      {
+        # no email
+        next
+      }
+
+      day_df <- get_day_dataframe(base_url,email_refs)
+
+
+      year_df <- rbind(year_df, day_df)
+      Sys.sleep(2)  # avoid too many requests
+      print(d)
+    }
+
+    print(paste("Month ", m, " done."))
+  }
+
+  # save year df
+  write.csv(year_df, file = paste0("datasets/scam/", y, '.csv'))
+
+  print(paste("Year", y, "completed"))
+
+}
+
+```
