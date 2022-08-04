@@ -1,0 +1,185 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+Load libraries
+```{r}
+# remotes::install_github("news-r/gensimr")
+library(quanteda)
+library(textstem)
+library(stringr)
+library(tidytext)
+library(stopwords)
+stop_w <- stopwords::stopwords(language = 'en')
+library(dplyr)
+library(text2vec)
+library(tm)
+library(tokenizers)
+```
+
+Type any R code in the chunk, for example:
+```{r}
+
+set.seed(0)
+df <- read.csv("datasets/final_df.csv")
+# reduce size to 50/50, my is not able to sustain computational times
+
+scam_df <- df[df$y == "scam",]
+n_scam_emails <- nrow(scam_df)
+
+non_scam_df <- df[df$y != "scam",]
+non_scam_ids <- sample(seq_len(nrow(non_scam_df)), size = n_scam_emails, replace = FALSE)
+non_scam_df <- non_scam_df[non_scam_ids,]
+
+df <- rbind(non_scam_df, scam_df)
+rm(scam_df,non_scam_df,non_scam_ids,n_scam_emails)
+
+write.csv(df, file="datasets/small_df.csv")
+
+texts <- str_to_lower(df$Text)
+summary(df)
+```
+
+
+# Tokenize and lemmatize
+```{r}
+df <- read.csv("datasets/small_df.csv")[,c(-1,-2)] # remove index columns
+# remove stopwords function
+rm_words <- function(string, words) {
+  stopifnot(is.character(string), is.character(words))
+  spltted <- strsplit(string, " ", fixed = TRUE) # fixed = TRUE for speedup
+  vapply(spltted, function(x) paste(x[!tolower(x) %in% words], collapse = " "), character(1))
+}
+
+print("Further polishing")
+texts <- str_replace_all(texts, pattern = "[:\\(\\)\\/\\<\\>\\\"\\?!,_\\*=\'\\&\\~\`]", replacement = " ") # . : ( )
+texts <- str_replace_all(texts, pattern = "(/\x20/.*@.*/\x20/)", replacement = "")  # emails
+texts <- str_replace_all(texts, pattern = "(\\[mailto:.*<.*@.*>\\])", replacement = "")  # emails
+texts <- str_replace_all(texts, pattern = "[\n\t]", replacement = " ") # \n
+texts <- str_replace_all(texts, pattern = "(--*)", replacement = " ") # -------------
+texts <- str_replace_all(texts, pattern = "[0-9\\.@]", replacement = " ") # all numbers
+texts <- str_replace_all(texts, pattern = "( enron )", replacement = "") # enron, due to enron dataset
+texts <- str_replace_all(texts, pattern = "( ect )", replacement = " ") # common on emails
+texts <- str_replace_all(texts, pattern = fixed(" com "), replacement = " ") # common on emails
+texts <- str_replace_all(texts, pattern = "( .? )", replacement = " ")  # single letters
+texts <- str_replace_all(texts, pattern = "( .? )", replacement = " ")  # single letters
+
+
+# remove stopwords
+print("Removing stopwords")
+texts <- rm_words(texts, stop_w)
+saveRDS(texts, file = "./Topic_modeling/cleaned-intermediate-saving.rds")
+```
+```{r}
+texts <- readRDS(file = "./Topic_modeling/cleaned-intermediate-saving.rds")
+print("Lemmatizing")
+texts <- lemmatize_strings(texts)
+# This is going to take an eternity to do
+saveRDS(texts, file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+```
+
+
+
+# Document level Sentiment analysis
+
+## Word frequency
+```{r}
+df <- read.csv("datasets/small_df.csv")[,c(-1,-2)] # remove index columns
+texts <- readRDS(file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+na_indexes <- which(texts == "") # if executed multiple times it won't work
+df <- df[-na_indexes,] # remove rows which produces empty lemmatizations
+texts <- texts[-na_indexes] # remove rows which produces empty lemmatizations
+df$Text <- texts
+write.csv(df, file = "datasets/small_df.csv")
+most_frequent_words <- NULL
+for(lemmatized_email in texts)
+{
+  freq_x <- sort(table(unlist(strsplit(lemmatized_email, " "))),      # Create frequency table
+                 decreasing = TRUE)
+  mfw <- names(freq_x[1])
+
+  most_frequent_words <- c(most_frequent_words, names(freq_x[1])) # take the mnost frequent word
+
+}
+df$MCW <- as.factor(most_frequent_words)
+write.csv(df, file = "datasets/small_df.csv")
+rm(na_indexes, most_frequent_words, freq_x, mfw)
+
+```
+
+## Some visualization
+
+```{r}
+library(wordcloud2)
+
+scam_words <- df$MCW[df$y == "scam"]
+non_scam_words <- df$MCW[df$y != "scam"]
+
+wordcloud2(data=as.data.frame(table(df$MCW[df$y == "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-light", backgroundColor = "black")
+wordcloud2(data=as.data.frame(table(df$MCW[df$y != "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-dark")
+
+```
+
+## Sentiment analysis
+
+
+```{r}
+library(syuzhet)
+sentiments <- get_nrc_sentiment(df$Text)
+head(sentiments)
+saveRDS(sentiments,file="./Topic_modeling/sentiments-intermediate-save.rds")
+df <- cbind(df,sentiments)
+saveRDS(df, file = "./Topic_modeling/df-intermediate-save.rds")
+```
+
+
+```{r}
+print(paste("Average trust score across scam emails:", mean(df$trust[df$y == 'scam'])))
+print(paste("Average trust score across non scam emails:", mean(df$trust[df$y != 'scam'])))
+
+print(paste("Average positive score across scam emails:",
+            mean(df$positive[df$y == 'scam'])))
+print(paste("Average positive score across non scam emails:",
+            mean(df$positive[df$y != 'scam'])))
+print(paste("Average negative score across scam emails:",
+            mean(df$negative[df$y == 'scam'])))
+print(paste("Average negative score across non scam emails:",
+            mean(df$negative[df$y != 'scam'])))
+
+print(paste("Average sentiment score across scam emails:",
+            mean(unlist(df[df$y == 'scam', seq(from=8, to=15)]))))
+print(paste("Average sentiment score across non scam emails:",
+            mean(unlist(df[df$y != 'scam', seq(from=8, to=15)]))))
+
+
+
+
+```
+We can see that scam emails are generally more emotional than normal ones
+
+```{r}
+# Visualization
+
+
+```
+
+## Tokenizing
+```{r}
+library(tokenizers)
+texts <- readRDS(file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+print("Tokenizing")
+# tokenize bigrams
+texts_unigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 1L)
+texts_bigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 2L)
+texts_trigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 3L)
+texts_quadgrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 4L)
+saveRDS(texts_unigrams, file = "./Topic_modeling/tokenization-unigram-intermediate-saving.rds")
+saveRDS(texts_bigrams, file = "./Topic_modeling/tokenization-bigram-intermediate-saving.rds")
+saveRDS(texts_trigrams, file = "./Topic_modeling/tokenization-trigram-intermediate-saving.rds")
+saveRDS(texts_quadgrams, file = "./Topic_modeling/tokenization-quadgram-intermediate-saving.rds")
+```
