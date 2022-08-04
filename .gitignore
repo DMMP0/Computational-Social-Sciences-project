@@ -1,4 +1,6 @@
 datasets/
+Topic_modeling/*.rds
+scraping/stefano
 
 ### R template
 # History files
