@@ -1,0 +1,104 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+# Training
+```{r}
+library(tidyverse)
+# for reproducible results
+set.seed(10)
+
+print("reading")
+# load full df
+df <- readRDS(file = "datasets/final_df_augmented.rds")
+
+print("removing")
+#select variable of interest (by removing others)
+df$From <- NULL
+df$Lemmas <- NULL
+df$Lemmas_subjects <- NULL
+df$Subject <- NULL
+df$Text <- NULL
+df$domain <- NULL # due to how the dataset is done, enron will always be non-spam
+
+df$MCW_subject <- NULL
+df$MCW <- NULL
+
+# if some NA
+df <- drop_na(df)
+
+df$has_links <- as.factor(df$has_links)
+
+#reduce dataset size
+print("sampling")
+#due to the disparity, mantaining the disproportion is important
+scam_df <- df[df$y=="scam",]
+non_scam_df <- df[df$y!="scam",]
+
+id_s <- sample(seq_len(nrow(scam_df)), size = 700)
+scam_df <- scam_df[id_s,]
+
+id_ns <- sample(seq_len(nrow(non_scam_df)), size = 300)
+non_scam_df <- non_scam_df[id_ns,]
+
+ids <- c(id_s, id_ns)
+df <- rbind(scam_df,non_scam_df)
+
+rm(id_s, id_ns, scam_df, non_scam_df)
+
+print("saving")
+saveRDS(ids, file = "datasets/ids_training.rds")
+saveRDS(df, file = "datasets/model_df.rds")
+
+```
+
+# reduced df
+```{r}
+
+```
+
+# Testing
+```{r}
+df <- readRDS("datasets/final_df_augmented.rds")
+ids <- readRDS("datasets/ids_training.rds")
+set.seed(198)
+
+df <- df[-ids,]
+
+
+
+scam_df <- df[df$y=="scam",]
+non_scam_df <- df[df$y!="scam",]
+
+id_s <- sample(seq_len(nrow(scam_df)), size = 700)
+scam_df <- scam_df[id_s,]
+
+id_ns <- sample(seq_len(nrow(non_scam_df)), size = 300)
+non_scam_df <- non_scam_df[id_ns,]
+
+ids <- c(id_s, id_ns)
+df <- rbind(scam_df,non_scam_df)
+
+print("removing")
+#select variable of interest (by removing others)
+df$From <- NULL
+df$Lemmas <- NULL
+df$Lemmas_subjects <- NULL
+df$Subject <- NULL
+df$Text <- NULL
+df$domain <- NULL # due to how the dataset is done, enron will always be non-spam
+
+df$MCW_subject <- NULL
+df$MCW <- NULL
+
+df$has_links <- as.factor(df$has_links)
+
+# if some NA
+df <- drop_na(df)
+
+rm(id_s, id_ns, scam_df, non_scam_df)
+
+print("saving")
+saveRDS(ids, file = "datasets/ids_testing.rds")
+saveRDS(df, file = "datasets/testing_df.rds")
+```

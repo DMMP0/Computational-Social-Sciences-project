@@ -1,0 +1,106 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Given that the format of the email changes widely enough, the code will be less generalized.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE,
+                      tidy.opts = list(width.cutoff = 60),
+                      tidy = TRUE)
+library(tidyverse)
+library(stringi)
+```
+
+# General
+```{r}
+root_dir <- "datasets/scam/2"
+# To look for:
+#   Date:
+#   From:
+#   Subject:
+#   Text
+
+root_directories <- list.dirs(path = root_dir, full.names = TRUE, recursive = FALSE) # we only want the first one
+```
+
+# Build from 1998
+
+## Triggers
+```{r}
+df <- data.frame(From='', Date='', Subject='', Text='')
+
+# triggers
+date_trigger <- "Date:"
+from_trigger <- "From:" # es: 85850312@kode.net
+subject_trigger <- "Subject:"
+text_trigger <- "^\\s*$" # new lines, they are too different
+```
+
+```{r}
+# I preferred to change here instead of doing another loop with 2 lists
+directories <- list.dirs(path = root_directories[13], full.names = TRUE, recursive = FALSE) # we only want the first one
+save_name <- "./datasets/scam/2/2022.csv"
+```
+
+```{r}
+df <- data.frame(From='', Date='', Subject='', Text='')
+
+
+for(directory in directories)
+{
+  emails <- list.files(directory, full.names = TRUE, recursive = TRUE)
+  for (email in emails)
+  {
+    from <- ''
+    date <- ''
+    subject <- ''
+    text <- ''
+
+    text_started <- FALSE # email text has started
+
+    # open file connection
+    if (is.null(email)) {next}
+    file_connection <- file(description = email, open = "r", blocking = TRUE)
+    # Loop till the line is the empty vector, character(0).
+    repeat
+    {
+      pl <- readLines(file_connection, n = 1) # Read one line from the connection
+      if (length(pl) == 0) { break } # If the line is empty, exit.
+
+      # Get the first 3
+      if (!text_started) {
+        if (str_detect(string = pl, pattern = paste0("(?<!.)",from_trigger, "(.*?)"))) {
+          from <- str_replace(string = pl, pattern = fixed(from_trigger), replacement = '')
+        }
+        else {
+          if (str_detect(string = pl, pattern = paste0("(?<!.)",date_trigger,"(.*?)"))) {
+            date <- str_replace(string = pl, pattern = fixed(date_trigger), replacement = '')
+          }
+          else {
+            if (str_detect(string = pl, pattern = paste0("(?<!.)",subject_trigger,"(.*?)"))) {
+              subject <- str_replace(string = pl, pattern = fixed(subject_trigger), replacement = '')
+            }
+          }
+        }
+      }
+      else {
+        text <- paste(text, pl, sep = '\n')
+        next
+      }
+      if (str_detect(string = pl, pattern = text_trigger)) {
+        text_started <- TRUE
+      }
+    }
+    # Explicitly opened connection needs to be explicitly closed.
+    close(file_connection)
+    rm(file_connection) # Removes the connection object from memory.
+
+    df <- rbind(df, data.frame(From = from, Date = date, Subject = subject, Text = text))
+  }
+  write.csv(df, file = paste("datasets/non-scam/tmp/temp.csv"))
+}
+write.csv(df, file = save_name)
+```

@@ -1,0 +1,439 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+Load libraries
+```{r}
+# remotes::install_github("news-r/gensimr")
+library(quanteda)
+library(textstem)
+library(stringr)
+library(tidytext)
+library(stopwords)
+stop_w <- stopwords::stopwords(language = 'en')
+library(dplyr)
+library(text2vec)
+library(tm)
+library(tokenizers)
+library(lubridate)
+```
+
+Sample from datasets ?
+```{r}
+
+set.seed(0)
+df <- readRDS("datasets/final_df.rds")
+# reduce size to 50/50, my pc is not able to sustain computational times
+
+# scam_df <- df[df$y == "scam",]
+# n_scam_emails <- nrow(scam_df)
+#
+# non_scam_df <- df[df$y != "scam",]
+# non_scam_ids <- sample(seq_len(nrow(non_scam_df)), size = n_scam_emails, replace = FALSE)
+# non_scam_df <- non_scam_df[non_scam_ids,]
+#
+# df <- rbind(non_scam_df, scam_df)
+# rm(scam_df,non_scam_df,non_scam_ids,n_scam_emails)
+#
+# saveRDS(df, file="datasets/small_df.rds")
+
+texts <- str_to_lower(df$Text)
+
+
+df$y <- as.factor(df$y)
+df$Month <- as.factor(df$Month)
+df$Day_number <- as.factor(df$Day_number)
+df$Day <- as.factor(df$Day)
+df$Hour <- as.factor(df$Hour)
+
+summary(df)
+```
+# domain
+
+```{r}
+library(stringi)
+# Encoding(df$From) <- "UTF-8"
+# df$From <- iconv(df$From, "UTF-8", "UTF-8",sub='') # ^ doesn't work in some cases
+df$domain <- str_sub(str_extract(df$From, pattern = "@.*\\."), start = 2L, end = -2L)
+df <- df %>%
+    mutate_at(vars(From, domain), function(x){gsub('[^ -~]', '', x)})
+# Encoding(df$domain) <- "UTF-8"
+# df$domain <- iconv(df$domain, "UTF-8", "UTF-8",sub='') # ^ doesn't work in some cases
+# df$domain <- stri_enc_toutf8(df$domain)
+df$domain <- str_sub(str_extract(df$From, pattern = "@.*\\."), start = 2L, end = -2L)
+na_indexes <- which(is.na(df$domain))
+# some things are still not matched, so we eill remove them based on the length
+na_indexes <- which(str_length(df$domain) > 25)
+df <- df[-na_indexes]
+df$domain <- as.factor(df$domain)
+df$domain <- droplevels(df$domain)
+
+```
+Dur to high dimensionality, we want to reduce the levels.
+Here is not done because of datasets characteristics
+
+
+# Temporal information
+
+```{r}
+library(stringr)
+# months
+df <- readRDS("datasets/final_df_augmented.rds")
+m <- str_to_lower(month.abb)
+df$Month <- as.character(df$Month)
+df$Month <- str_to_lower(df$Month)
+NA_ind <- which(!(df$Month %in% m))
+if(length(NA_ind != 0)) {df <- df[-NA_ind,]}
+df$Month <- as.factor(df$Month)
+
+m <- str_to_lower(c("Fri" ,"Mon",   "Sat",   "Sun" ,  "Thu",   "Tue",   "Wed" ))
+df$Day <- as.character(df$Day)
+df$Day <- str_to_lower(df$Day)
+NA_ind <- which(!(df$Day %in% m))
+if(length(NA_ind != 0)) {df <- df[-NA_ind,]}
+df$Day <- as.factor(df$Day)
+df$Day <- droplevels(df$Day)
+
+m <- as.character(1:31)
+df$Day_number <- as.character(df$Day_number)
+df$Day_number <- str_replace(df$Day_number, pattern = ",", replacement = "")
+NA_ind <- which(unlist(str_detect(df$Day_number, pattern = "0.")))
+if(length(NA_ind != 0)) {
+  df$Day_number[NA_ind] <- str_sub(df$Day_number[NA_ind], start = 2L)
+  df$Day_number <- as.factor(df$Day_number)
+}
+NA_ind <- which(df$Day_number== 0)
+if(length(NA_ind != 0)) {
+  df <- df[-NA_ind,]
+  df$Day_number <- droplevels(df$Day_number)
+}
+NA_ind <- which(df$Hour == 24)
+if(length(NA_ind != 0)) {
+  df$Hour[NA_ind] <- 0
+  df$Hour <- droplevels(df$Hour)
+}
+```
+
+
+# Subjects
+
+Detecting urgency in a small text could be a feat of its own.
+Given that the literature is scarce, I will use an extremely simplified model that takes mostly into account metadata
+
+```{r}
+
+# Functions
+
+capital_score <- function(texts) {
+  # simply count the percentage of capital letters
+
+  # remove everything that is not a letter
+  texts <- str_replace_all(texts, pattern = "[^A-Za-z]", replacement = '')
+  texts <- str_replace_all(texts, pattern = "\\s", replacement = '')
+
+  l <- str_length(texts)
+  capitals <- str_count(texts, "[A-Z]")
+  score <- floor((capitals / l) * 100)
+  return(score)
+}
+
+non_letter_score <- function(texts) {
+  # simply count the characters which are not letters
+  # but first, remove spaces
+  texts <- str_replace_all(texts, pattern = "\\s", replacement = '')
+  score <- str_count(texts, "[^A-Za-z]")
+  return(score)
+}
+
+subjects <- df$Subject
+
+df$subject_capital_score <- capital_score(subjects)
+df$subject_non_letter_score <- non_letter_score(subjects)
+df$subject_length <- str_length(subjects)
+
+# save
+saveRDS(df, file = 'datasets/final_df_augmented.rds')
+
+```
+
+
+
+# Tokenize and lemmatize
+```{r}
+# df <- readRDS("datasets/final_df_augmented.rds")
+
+# remove stopwords function
+rm_words <- function(string, words) {
+  stopifnot(is.character(string), is.character(words))
+  spltted <- strsplit(string, " ", fixed = TRUE) # fixed = TRUE for speedup
+  vapply(spltted, function(x) paste(x[!tolower(x) %in% words], collapse = " "), character(1))
+}
+
+print("Further polishing")
+
+print('Removing HTML (everything between <>)')
+texts <- str_replace_all(texts, pattern = "(<.*>)", replacement = "") # remove html stuff
+
+print("Trying to remove emails")
+texts <- str_replace_all(texts, pattern = "(/\x20/.*@.*/\x20/)", replacement = "")  # emails
+texts <- str_replace_all(texts, pattern = "(\\[mailto:.*<.*@.*>\\])", replacement = "")  # emails
+
+print("Removing weird characters")
+texts <- str_replace_all(texts, pattern = "[:\\(\\)\\/\\<\\>\\\"\\?!,_\\*=\'\\&\\~\`]", replacement = " ") # . : ( )
+
+print("Removing \n \t")
+texts <- str_replace_all(texts, pattern = "[\n\t]", replacement = " ") # \n
+print("Removing things common on email (enron, com, ...)")
+texts <- str_replace_all(texts, pattern = "(--*)", replacement = " ") # -------------
+texts <- str_replace_all(texts, pattern = "[0-9\\.@]", replacement = " ") # all numbers
+texts <- str_replace_all(texts, pattern = "( enron )", replacement = "") # enron, due to enron dataset
+texts <- str_replace_all(texts, pattern = "( ect )", replacement = " ") # common on emails
+texts <- str_replace_all(texts, pattern = fixed(" com "), replacement = " ") # common on emails
+
+print("Removing single characters")
+texts <- str_replace_all(texts, pattern = "( .? )", replacement = " ")  # single letters
+texts <- str_replace_all(texts, pattern = "( .? )", replacement = " ")  # single letters. Duplicated becasue sometimes it doesn't work
+
+
+# remove stopwords
+print("Removing stopwords")
+texts <- rm_words(texts, stop_w)
+saveRDS(texts, file = "./Topic_modeling/cleaned-intermediate-saving.rds")
+```
+```{r}
+# texts <- readRDS(file = "./Topic_modeling/cleaned-intermediate-saving.rds")
+print("Lemmatizing")
+texts <- lemmatize_strings(texts)
+# This is going to take an eternity to do
+saveRDS(texts, file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+```
+
+Now that the content is lemmatized, we can search for links faster and remove everything that the previous filter was not able to remove
+
+# check for links
+```{r}
+l <- rep.int(0, nrow(df))
+h <- str_which(texts, pattern = "https?")
+l[h] <- 1
+df$has_links <- l
+rm(l,h)
+
+```
+Remove non characters from lemmas
+```{r}
+# texts <- readRDS(file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+
+texts <- str_replace_all(texts, pattern = "[^a-z\\s]", replacement = '')
+```
+
+# Document level Sentiment analysis
+
+## Word frequency
+```{r}
+# texts <- readRDS(file = "./Topic_modeling/lemmatization-intermediate-saving.rds")
+df$Lemmas <- texts
+
+na_indexes <- which(texts == "") # if executed multiple times it won't work
+df <- df[-na_indexes,] # remove rows which produces empty lemmatizations
+texts <- texts[-na_indexes] # remove rows which produces empty lemmatizations
+
+most_frequent_words <- NULL
+for (lemmatized_email in df$Lemmas)
+{
+  freq_x <- sort(table(unlist(strsplit(lemmatized_email, " "))),      # Create frequency table
+                 decreasing = TRUE)
+  mfw <- names(freq_x[1])
+
+  most_frequent_words <- c(most_frequent_words, names(freq_x[1])) # take the most frequent word
+
+}
+df$MCW <- as.factor(most_frequent_words)
+saveRDS(df, file = "datasets/final_df_augmented.rds")
+rm(na_indexes, most_frequent_words, freq_x, mfw)
+
+```
+
+## Some visualization
+
+```{r}
+library(wordcloud2)
+
+scam_words <- df$MCW[df$y == "scam"]
+non_scam_words <- df$MCW[df$y != "scam"]
+
+wordcloud2(data = as.data.frame(table(df$MCW[df$y == "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-light", backgroundColor = "black")
+wordcloud2(data = as.data.frame(table(df$MCW[df$y != "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-dark")
+
+```
+
+we can aso do the same for the subject
+
+```{r}
+print("Converting to lower string...")
+subjects <- df$Subject
+subjects <- str_to_lower(subjects)
+
+print("Removing characters...")
+subjects <- str_replace_all(subjects, pattern = "[^a-z\\s]", replacement = '')
+
+print("Removing stopwords...")
+subjects <- rm_words(subjects, stop_w)
+
+print("Lemmatizing...")
+subjects <- lemmatize_strings(subjects)
+df$Lemmas_subjects <- subjects
+
+print("Calculating most frequent words")
+most_frequent_words <- NULL
+for (lemmatized_email in df$Lemmas_subjects)
+{
+  if(lemmatized_email == ""){
+    most_frequent_words <- c(most_frequent_words, " ")
+    next
+  }
+
+  freq_x <- sort(table(unlist(strsplit(lemmatized_email, " "))),      # Create frequency table
+                 decreasing = TRUE)
+  mfw <- names(freq_x[1])
+
+  most_frequent_words <- c(most_frequent_words, names(freq_x[1])) # take the most frequent word
+
+}
+
+df$MCW_subject <- as.factor(most_frequent_words)
+rm(most_frequent_words, freq_x, mfw)
+print("Saving df...")
+saveRDS(df, file = "datasets/final_df_augmented.rds")
+
+print("Visualizing")
+scam_words <- df$MCW_subject[df$y == "scam"]
+non_scam_words <- df$MCW_subject[df$y != "scam"]
+
+wordcloud2(data = as.data.frame(table(df$MCW_subject[df$y == "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-light", backgroundColor = "black")
+wordcloud2(data = as.data.frame(table(df$MCW_subject[df$y != "scam"])), size = 0.7, shape = 'pentagon',
+           color = "random-dark")
+```
+
+
+This common word however will haunt us with curse of dimensionality, so we van simplyfiy some
+
+```{r}
+levels(df$MCW) <- c(levels(df$MCW),"None")
+levels(df$MCW_subject) <- c(levels(df$MCW_subject),"None")
+
+indexes <- which(str_length(as.character(df$MCW)) < 3)
+df$MCW[indexes] <- "None"
+
+indexes <- which(str_length(as.character(df$MCW_subject)) < 3)
+df$MCW_subject[indexes] <- "None"
+
+```
+Further removing less common words to top 100
+```{r}
+# df <- readRDS(file = "datasets/final_df_augmented.rds")
+scam <- summary(df$MCW_subject[df$y=="scam"])[1:99]
+not_scam <- summary(df$MCW_subject[df$y!="scam"])[1:99]
+
+
+for(i in nrow(df)){
+
+  if(as.character(df[i,]$MCW_subject) %in% names(scam) || as.character(df[i,]$MCW_subject) %in% names(not_scam)){
+    next
+  } else {
+    df$MCW_subject[i] <- "None"
+  }
+}
+
+
+
+
+```
+
+## Sentiment analysis
+
+
+```{r}
+library(syuzhet)
+
+print("Calculating subjects sentiments")
+sentiments_subject <- get_nrc_sentiment(df$Lemmas_subjects)
+names(sentiments_subject) <- c(
+        "Subject_anger",
+        "Subject_anticipation",
+        "Subject_disgust",
+        "Subject_fear",
+        "Subject_joy",
+        "Subject_sadness",
+        "Subject_surprise",
+        "Subject_trust",
+        "Subject_negative",
+        "Subject_positive"
+)
+
+print("Calculating text sentiments")
+text_sentiment <- get_nrc_sentiment(df$Lemmas)
+names(text_sentiment) <- c(
+        "Text_anger",
+        "Text_anticipation",
+        "Text_disgust",
+        "Text_fear",
+        "Text_joy",
+        "Text_sadness",
+        "Text_surprise",
+        "Text_trust",
+        "Text_negative",
+        "Text_positive"
+)
+
+head(sentiments_subject)
+
+print("checkpointing...")
+saveRDS(cbind(sentiments_subject, text_sentiment), file = "./Topic_modeling/sentiments-intermediate-save.rds")
+
+print("updating df...")
+df <- cbind(df, sentiments_subject, text_sentiment)
+
+print("removing NAs")
+df <- drop_na(df)
+
+saveRDS(df, file = "datasets/final_df_augmented.rds")
+```
+
+
+```{r}
+# df <- readRDS(file = "datasets/final_df_augmented.rds")
+print(paste("Average trust score across scam emails:", mean(df$Text_trust[df$y == 'scam'])))
+print(paste("Average trust score across non scam emails:", mean(df$Text_trust[df$y != 'scam'])))
+
+print(paste("Average positive score across scam emails:",
+            mean(df$Text_positive[df$y == 'scam'])))
+print(paste("Average positive score across non scam emails:",
+            mean(df$Text_positive[df$y != 'scam'])))
+print(paste("Average negative score across scam emails:",
+            mean(df$Text_negative[df$y == 'scam'])))
+print(paste("Average negative score across non scam emails:",
+            mean(df$Text_negative[df$y != 'scam'])))
+
+print(paste("Average sentiment score across scam emails:",
+            mean(unlist(df[df$y == 'scam', seq(from = 18, to = 37)]))))
+print(paste("Average sentiment score across non scam emails:",
+            mean(unlist(df[df$y != 'scam', seq(from = 18, to = 37)]))))
+
+
+
+
+```
+We can see that scam emails are generally more emotional than normal ones
+
+```{r}
+t.test(x= df$Text_trust[df$y == 'scam'], y=df$Text_trust[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+
+```
+
+

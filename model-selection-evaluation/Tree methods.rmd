@@ -1,0 +1,296 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE,
+                      message=FALSE,
+                      tidy.opts=list(width.cutoff = 60),
+                      tidy = TRUE)
+```
+
+```{r load-data, include=FALSE}
+library(tidyverse)
+#library(gbm)
+#library(tree)
+#library(randomForest)
+
+
+df_tree <- readRDS(file = "datasets/model_df.rds")  #we cannot call it df, otherwise cv.tree won't work
+
+
+```
+
+```{r}
+
+# here we can use vartiable importance instead, however, for consistency, I will reduce in an equal way
+df_only_significant <- readRDS(file = "datasets/df_training_only_significant.rds")
+df_no_sentiment <- readRDS(file = "datasets/df_training_no_sentiment.rds")
+
+
+```
+
+# Simple Trees
+
+```{r}
+set.seed(0)
+library(tree)
+model_tree <- tree(y ~ ., data = df_tree)
+summary(model_tree)
+plot(model_tree)
+text(model_tree, pretty=0)
+title(main="Tree model for scam emails", sub = "Unpruned regression tree")
+saveRDS(model_tree, file = "model-selection-evaluation/Simple_Tree.rds")
+```
+
+```{r}
+set.seed(0)
+library(tree)
+model_tree_o <- tree(y ~ ., data = df_only_significant)
+summary(model_tree_o)
+plot(model_tree_o)
+text(model_tree_o, pretty=0)
+title(main="Tree model for scam emails", sub = "Unpruned regression tree")
+saveRDS(model_tree_o, file = "model-selection-evaluation/Simple_Tree_only_significant.rds")
+```
+
+```{r}
+set.seed(0)
+library(tree)
+model_tree_no <- tree(y ~ ., data = df_no_sentiment)
+summary(model_tree_no)
+plot(model_tree_no)
+text(model_tree_no, pretty=0)
+title(main="Tree model for scam emails", sub = "Unpruned regression tree")
+saveRDS(model_tree_no, file = "model-selection-evaluation/Simple_Tree_no_sentiment.rds")
+```
+
+# Pruning
+```{r}
+set.seed(0)
+cv_train <- cv.tree(model_tree, ,prune.tree)
+# 10 fold cv
+plot(cv_train$size, cv_train$dev, type="b", main = 'Cross-validation: first batch result',
+    xlab='Tree size', ylab='Cross validation error')
+
+# print optimal size
+paste('Optimal size:',cv_train$size[which.min(cv_train$dev)])
+```
+```{r}
+model_pruned <- prune.tree(model_tree, best = 6)
+saveRDS(model_pruned, file = "model-selection-evaluation/Pruned_Tree.rds")
+plot(model_pruned)
+text(model_pruned, pretty=0)
+summary(model_pruned)
+```
+
+## only significant
+```{r}
+set.seed(0)
+cv_train <- cv.tree(model_tree_o, ,prune.tree)
+# 10 fold cv
+plot(cv_train$size, cv_train$dev, type="b", main = 'Cross-validation: first batch result',
+    xlab='Tree size', ylab='Cross validation error')
+
+# print optimal size
+paste('Optimal size:',cv_train$size[which.min(cv_train$dev)])
+```
+
+```{r}
+model_pruned <- prune.tree(model_tree_o, best = 9)
+saveRDS(model_pruned, file = "model-selection-evaluation/Pruned_Tree_only_significant.rds")
+plot(model_pruned)
+text(model_pruned, pretty=0)
+summary(model_pruned)
+```
+
+## no sentiment
+```{r}
+set.seed(0)
+cv_train <- cv.tree(model_tree_no, ,prune.tree)
+# 10 fold cv
+plot(cv_train$size, cv_train$dev, type="b", main = 'Cross-validation: first batch result',
+    xlab='Tree size', ylab='Cross validation error')
+
+# print optimal size
+paste('Optimal size:',cv_train$size[which.min(cv_train$dev)])
+```
+
+```{r}
+model_pruned <- prune.tree(model_tree_no, best = 5)
+saveRDS(model_pruned, file = "model-selection-evaluation/Pruned_Tree_no_sentiment.rds")
+plot(model_pruned)
+text(model_pruned, pretty=0)
+summary(model_pruned)
+```
+
+
+# Bagging
+
+```{r}
+library(randomForest)
+max_predictors <- ncol(df_tree) - 1
+model_bagging <- randomForest(y ~ ., data = df_tree, ntree = 1000 ,mtry = max_predictors)
+plot(model_bagging)
+saveRDS(model_bagging, file = "model-selection-evaluation/Bagging.rds")
+```
+
+```{r}
+library(randomForest)
+max_predictors <- ncol(df_only_significant) - 1
+model_bagging <- randomForest(y ~ ., data = df_only_significant, ntree = 1000 ,mtry = max_predictors)
+plot(model_bagging)
+saveRDS(model_bagging, file = "model-selection-evaluation/Bagging_only_significant.rds")
+```
+
+```{r}
+library(randomForest)
+max_predictors <- ncol(df_no_sentiment) - 1
+model_bagging <- randomForest(y ~ ., data = df_no_sentiment, ntree = 1000 ,mtry = max_predictors)
+plot(model_bagging)
+saveRDS(model_bagging, file = "model-selection-evaluation/Bagging_no_sentiment.rds")
+```
+
+# Random Forest
+```{r}
+oob <- NULL
+
+for (m in seq_len(max_predictors - 1)) {
+  rf_tmp <- randomForest(y ~ ., data = df_tree, mtry = m, ntree = 1000)
+  oob <- c(oob, mean(rf_tmp$err.rate[, 1]))
+}
+
+minim <- which.min(oob)
+
+model_rf <- randomForest(y ~ ., data = df_tree, mtry = minim, ntree = 1000)
+plot(model_rf)
+varImpPlot(model_rf)
+saveRDS(model_rf, file = "model-selection-evaluation/Random_Forest.rds")
+```
+
+```{r}
+oob <- NULL
+
+for (m in seq_len(max_predictors - 1)) {
+  rf_tmp <- randomForest(y ~ ., data = df_only_significant, mtry = m, ntree = 1000)
+  oob <- c(oob, mean(rf_tmp$err.rate[, 1]))
+}
+
+minim <- which.min(oob)
+
+model_rf <- randomForest(y ~ ., data = df_only_significant, mtry = minim, ntree = 1000)
+plot(model_rf)
+varImpPlot(model_rf)
+saveRDS(model_rf, file = "model-selection-evaluation/Random_Forest_only_significant.rds")
+```
+
+
+```{r}
+oob <- NULL
+
+for (m in seq_len(max_predictors - 1)) {
+  rf_tmp <- randomForest(y ~ ., data = df_no_sentiment, mtry = m, ntree = 1000)
+  oob <- c(oob, mean(rf_tmp$err.rate[, 1]))
+}
+
+minim <- which.min(oob)
+
+model_rf <- randomForest(y ~ ., data = df_no_sentiment, mtry = minim, ntree = 1000)
+plot(model_rf)
+varImpPlot(model_rf)
+saveRDS(model_rf, file = "model-selection-evaluation/Random_Forest_no_sentiment.rds")
+```
+
+# Boosting
+```{r}
+# library(gbm)  for some reason gbm crashes R without a clear error message
+library(caret)
+
+# reference: https://rpubs.com/mpfoley73/529130
+
+# re_encode variables
+df_tree$y <- as.character(df_tree$y)
+df_tree$y[df_tree$y == "not-scam"] <- "not_scam"
+df_tree$y <- as.factor(df_tree$y)
+df_tree$y <- droplevels(df_tree$y)
+
+boosting_model <- train(y ~ .,
+               data = df_tree,
+               method = "gbm",  # for bagged tree
+               tuneLength = 5,  # choose up to 5 combinations of tuning parameters
+               metric = "ROC",  # evaluate hyperparamter combinations with ROC
+               trControl = trainControl(
+                 method = "cv",  # k-fold cross validation
+                 number = 10,  # 10 folds
+                 savePredictions = "final",       # save predictions for the optimal tuning parameter1
+                      classProbs = TRUE,  # return class probabilities in addition to predicted values
+                      summaryFunction = twoClassSummary  # for binary response variable
+                      )
+                    )
+
+
+# caret tunes:
+#    n.trees: number of boosting iterations
+#    interaction.depth: maximum tree depth
+#    shrinkage: shrinkage
+#   n.minobsinnode: mimimum terminal node size
+
+```
+```{r}
+plot(boosting_model)
+saveRDS(boosting_model, file = "./model-selection-evaluation/Boosting.rds")
+```
+
+## Only significant
+
+```{r}
+# re_encode variables
+df_only_significant$y <- as.character(df_only_significant$y)
+df_only_significant$y[df_only_significant$y == "not-scam"] <- "not_scam"
+df_only_significant$y <- as.factor(df_only_significant$y)
+df_only_significant$y <- droplevels(df_only_significant$y)
+
+boosting_model <- train(y ~ .,
+                        data = df_only_significant,
+                        method = "gbm",  # for bagged tree
+                        tuneLength = 5,  # choose up to 5 combinations of tuning parameters
+                        metric = "ROC",  # evaluate hyperparamter combinations with ROC
+                        trControl = trainControl(
+                          method = "cv",  # k-fold cross validation
+                          number = 10,  # 10 folds
+                          savePredictions = "final",       # save predictions for the optimal tuning parameter1
+                          classProbs = TRUE,  # return class probabilities in addition to predicted values
+                          summaryFunction = twoClassSummary  # for binary response variable
+                        )
+)
+
+plot(boosting_model)
+saveRDS(boosting_model, file = "./model-selection-evaluation/Boosting_only_significant.rds")
+```
+
+## No sentiment
+```{r}
+# re_encode variables
+df_no_sentiment$y <- as.character(df_no_sentiment$y)
+df_no_sentiment$y[df_no_sentiment$y == "not-scam"] <- "not_scam"
+df_no_sentiment$y <- as.factor(df_no_sentiment$y)
+df_no_sentiment$y <- droplevels(df_no_sentiment$y)
+
+boosting_model <- train(y ~ .,
+                        data = df_no_sentiment,
+                        method = "gbm",  # for bagged tree
+                        tuneLength = 5,  # choose up to 5 combinations of tuning parameters
+                        metric = "ROC",  # evaluate hyperparamter combinations with ROC
+                        trControl = trainControl(
+                          method = "cv",  # k-fold cross validation
+                          number = 10,  # 10 folds
+                          savePredictions = "final",       # save predictions for the optimal tuning parameter1
+                          classProbs = TRUE,  # return class probabilities in addition to predicted values
+                          summaryFunction = twoClassSummary  # for binary response variable
+                        )
+)
+
+plot(boosting_model)
+saveRDS(boosting_model, file = "./model-selection-evaluation/Boosting_no_sentiment.rds")
+```

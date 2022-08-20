@@ -1,0 +1,375 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# SVM
+
+# read dataset
+```{r}
+df <- readRDS(file = "datasets/model_df.rds")
+df_no_sentiment <- readRDS(file = "datasets/df_training_no_sentiment.rds")
+df_only_significant <- readRDS(file = "datasets/df_training_only_significant.rds")
+library(tidyverse)
+library(e1071)
+```
+
+# Maximal margin classifier
+
+```{r}
+# the cost cannot be set to 0, so it will be set to a very low number
+model_mmc <- svm(y ~ ., data = df, kernel = "linear", cost = 1e100,
+                 scale = FALSE, type = "C-classification", probability = TRUE)
+summary(model_mmc)
+saveRDS(model_mmc, file = "./model-selection-evaluation/Maximal_margin_classifier.rds")
+```
+## Visualization
+
+```{r}
+model_mmc <- readRDS("./model-selection-evaluation/Maximal_margin_classifier.rds")
+
+set.seed(0)
+
+library(umap)
+library(dplyr)
+library(plotly)
+
+plot_df <- df
+levels(plot_df$y) <- c(-1, 1)
+levels(plot_df$Month) <- c(4, 8, 12, 2, 1, 7, 6, 3, 5, 11, 10, 9)
+levels(plot_df$Day) <- c(5, 1, 6, 7, 4, 2, 3)
+
+for (i in seq_len(ncol(plot_df))) {
+  plot_df[i] <- as.integer(unlist(plot_df[i]))
+}
+
+# 3D plot
+sumap <- umap(plot_df, n_components = 3, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+               target_weight = 0.5, n_epochs = 50)
+repr <- as.data.frame(sumap$layout)
+
+plot_y <- sumap$config$y
+
+plot_y <- as.character(plot_y)
+plot_y[plot_y== 1] <- "scam"
+plot_y[plot_y == 2] <- "not-scam"
+plot_y <- as.factor(plot_y)
+
+plot_ly(x=repr$V1, y=repr$V2, z=repr$V3, type="scatter3d", mode="markers",
+        color=plot_y)
+
+
+# 2D plot
+sumap <- umap(plot_df, n_components = 2, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+              target_weight = 0.5, n_epochs = 50)
+repr <- as.data.frame(sumap$layout)
+repr <- cbind(repr, plot_df$y)
+names(repr)[3] <- "y"
+
+svmfit <- model_mmc
+
+w <- t(svmfit$coefs) %*% svmfit$SV
+b0 <- -svmfit$rho
+
+slope <- -w[1] / w[2]
+intercept <- -b0 / w[2]
+
+repr$y <- as.character(repr$y)
+repr$y[repr$y == 1] <- "scam"
+repr$y[repr$y == 2] <- "not-scam"
+repr$y <- as.factor(repr$y)
+
+ggplot(data = repr, aes(x = V1, y = V2, color = y)) +
+  geom_point() +
+  scale_color_manual(values = c("green", "pink")) +
+  geom_point(data = repr[svmfit$index,], aes(x = V1, y = V2), color = "black", size = 4, alpha = 0.5) +
+  geom_abline(slope = slope, intercept = intercept) +
+  geom_abline(slope = slope, intercept = intercept - 1 / w[2], linetype = "dashed") +
+  geom_abline(slope = slope, intercept = intercept + 1 / w[2], linetype = "dashed") +
+  xlim(-3, 3) +
+  ylim(-20, 20) +
+  labs(title = "Maximal Margin Classifier", subtitle = "Scam data",
+       caption = paste("Data reduced with supervised umap. Cost: No misclassification allowed"),
+       x = "Feature representation 1", y = "Feature representation 2")
+```
+
+## only significant
+```{r}
+# the cost cannot be set to 0, so it will be set to a very low number
+model_mmc <- svm(y ~ ., data = df_only_significant, kernel = "linear", cost = 1e100,
+                 scale = FALSE, type = "C-classification", probability = TRUE)
+summary(model_mmc)
+saveRDS(model_mmc, file = "./model-selection-evaluation/Maximal_margin_classifier_only_significant.rds")
+```
+## No sentiment
+```{r}
+# the cost cannot be set to 0, so it will be set to a very low number
+model_mmc <- svm(y ~ ., data = df_no_sentiment, kernel = "linear", cost = 1e100,
+                 scale = FALSE, type = "C-classification", probability = TRUE)
+summary(model_mmc)
+saveRDS(model_mmc, file = "./model-selection-evaluation/Maximal_margin_classifier_no_sentiment.rds")
+```
+
+# Support vector classifier
+
+## tuning
+```{r}
+set.seed(0)
+
+tune.out <- tune(svm, y ~ ., probability = TRUE, data = df, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, seq(from = 5, to = 100, by = 5))))
+summary(tune.out)
+```
+```{r}
+model_svc <- tune.out$best.model
+summary(model_svc)
+saveRDS(model_svc, file = "./model-selection-evaluation/Support_vector_classifier.rds")
+
+```
+## Visualization
+```{r}
+# 2D plot
+sumap <- umap(plot_df, n_components = 2, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+              target_weight = 0.5, n_epochs = 50)
+repr <- as.data.frame(sumap$layout)
+repr <- cbind(repr, plot_df$y)
+names(repr)[3] <- "y"
+
+svmfit <- model_svc
+
+w <- t(svmfit$coefs) %*% svmfit$SV
+b0 <- -svmfit$rho
+
+slope <- -w[1] / w[2]
+intercept <- -b0 / w[2]
+
+repr$y <- as.character(repr$y)
+repr$y[repr$y == 1] <- "scam"
+repr$y[repr$y == 2] <- "not-scam"
+repr$y <- as.factor(repr$y)
+
+ggplot(data = repr, aes(x = V1, y = V2, color = y)) +
+  geom_point() +
+  scale_color_manual(values = c("green", "pink")) +
+  geom_point(data = repr[svmfit$index,], aes(x = V1, y = V2), color = "black", size = 4, alpha = 0.5) +
+  geom_abline(slope = slope, intercept = intercept) +
+  geom_abline(slope = slope, intercept = intercept - 1 / w[2], linetype = "dashed") +
+  geom_abline(slope = slope, intercept = intercept + 1 / w[2], linetype = "dashed") +
+  xlim(-3, 3) +
+  ylim(-20, 20) +
+  labs(title = "Maximal Margin Classifier", subtitle = "Scam data",
+       caption = paste("Data reduced with supervised umap. Cost: No misclassification allowed"),
+       x = "Feature representation 1", y = "Feature representation 2")
+```
+
+## Only significant
+```{r}
+set.seed(0)
+
+tune.out <- tune(svm, y ~ ., probability = TRUE, data = df_only_significant, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, seq(from = 5, to = 100, by = 5))))
+summary(tune.out)
+
+model_svc <- tune.out$best.model
+summary(model_svc)
+saveRDS(model_svc, file = "./model-selection-evaluation/Support_vector_classifier_only_significant.rds")
+```
+
+## No sentiment
+```{r}
+set.seed(0)
+
+tune.out <- tune(svm, y ~ ., probability = TRUE, data = df_no_sentiment, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, seq(from = 5, to = 100, by = 5))))
+summary(tune.out)
+
+model_svc <- tune.out$best.model
+summary(model_svc)
+saveRDS(model_svc, file = "./model-selection-evaluation/Support_vector_classifier_no_sentiment.rds")
+```
+
+
+# Support Vector Machines
+## Radial
+```{r}
+set.seed(0)
+# this WILL take a while
+tune.out <- tune(svm, y ~ ., data = df, kernel = "radial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, seq(from = 10, to = 1000, by = 50)),
+  gamma = c(0.5, 1, 2, 3, 4, 5)
+))
+summary(tune.out)
+model_svm_r <- tune.out$best.model
+summary(model_svm_r)
+saveRDS(model_svm_r, file = "./model-selection-evaluation/Support_vector_machine_radial.rds")
+
+```
+
+### Visualization
+```{r}
+# 2D plot
+# here we need to use the default plow, so we will need to fit again to get an idea
+
+# sumap <- umap(plot_df, n_components = 2, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+#               target_weight = 0.5, n_epochs = 50)
+# repr <- as.data.frame(sumap$layout)
+# repr <- cbind(repr, plot_df$y)
+# names(repr)[3] <- "y"
+
+svmfit <- svm(y ~ ., data = repr, kernel = "radial", cost = 10, gamma = 0.5)
+plot(svmfit, repr)
+```
+
+### only significant
+```{r}
+set.seed(0)
+# this WILL take a while
+tune.out <- tune(svm, y ~ ., data = df_only_significant, kernel = "radial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, seq(from = 10, to = 1000, by = 50)),
+  gamma = c(0.5, 1, 2, 3, 4, 5)
+))
+summary(tune.out)
+model_svm_r <- tune.out$best.model
+summary(model_svm_r)
+saveRDS(model_svm_r, file = "./model-selection-evaluation/Support_vector_machine_radial_only_significant.rds")
+```
+
+### no sentiment
+```{r}
+set.seed(0)
+# this WILL take a while
+tune.out <- tune(svm, y ~ ., data = df_no_sentiment, kernel = "radial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, seq(from = 10, to = 1000, by = 50)),
+  gamma = c(0.5, 1, 2, 3, 4, 5)
+))
+summary(tune.out)
+model_svm_r <- tune.out$best.model
+summary(model_svm_r)
+saveRDS(model_svm_r, file = "./model-selection-evaluation/Support_vector_machine_radial_no_sentiment.rds")
+```
+
+## Sigmoid
+```{r}
+set.seed(0)
+# this will take a while
+tune.out <- tune(svm, y ~ ., data = df, kernel = "sigmoid", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3, 4),
+  coef0 = c(0, 0.1, 0.5, 1, 5, 10)
+))
+summary(tune.out)
+model_svm_s <- tune.out$best.model
+summary(model_svm_s)
+saveRDS(model_svm_s, file = "./model-selection-evaluation/Support_vector_machine_sigmoid.rds")
+```
+### Visualization
+```{r}
+# 2D plot
+# here we need to use the default plow, so we will need to fit again to get an idea
+
+# sumap <- umap(plot_df, n_components = 2, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+#               target_weight = 0.5, n_epochs = 50)
+# repr <- as.data.frame(sumap$layout)
+# repr <- cbind(repr, plot_df$y)
+# names(repr)[3] <- "y"
+
+svmfit <- svm(y ~ ., data = repr, kernel = "sigmoid", cost = 0.01, gamma = 2, coef0 = 0)
+plot(svmfit, repr)
+```
+
+### only significant
+
+```{r}
+set.seed(0)
+# this will take a while
+tune.out <- tune(svm, y ~ ., data = df_only_significant, kernel = "sigmoid", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3, 4),
+  coef0 = c(0, 0.1, 0.5, 1, 5, 10)
+))
+summary(tune.out)
+model_svm_s <- tune.out$best.model
+summary(model_svm_s)
+saveRDS(model_svm_s, file = "./model-selection-evaluation/Support_vector_machine_sigmoid_only_significant.rds")
+```
+
+### no sentiment
+```{r}
+set.seed(0)
+# this will take a while
+tune.out <- tune(svm, y ~ ., data = df_no_sentiment, kernel = "sigmoid", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3, 4),
+  coef0 = c(0, 0.1, 0.5, 1, 5, 10)
+))
+summary(tune.out)
+model_svm_s <- tune.out$best.model
+summary(model_svm_s)
+saveRDS(model_svm_s, file = "./model-selection-evaluation/Support_vector_machine_sigmoid_no_sentiment.rds")
+```
+
+## Polynomial
+```{r}
+set.seed(0)
+# this will take the most
+tune.out <- tune(svm, y ~ ., data = df, kernel = "polynomial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3),
+  coef0 = c(0, 1, 5, 10),
+  degree = c(1, 2, 3, 5)
+))
+# less options because of computational times and max iterations
+summary(tune.out)
+model_svm_p <- tune.out$best.model
+summary(model_svm_p)
+saveRDS(model_svm_p, file = "./model-selection-evaluation/Support_vector_machine_polynomial.rds")
+```
+
+### Visualization
+```{r}
+# 2D plot
+# here we need to use the default plow, so we will need to fit again to get an idea
+
+# sumap <- umap(plot_df, n_components = 2, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
+#               target_weight = 0.5, n_epochs = 50)
+# repr <- as.data.frame(sumap$layout)
+# repr <- cbind(repr, plot_df$y)
+# names(repr)[3] <- "y"
+
+svmfit <- svm(y ~ ., data = repr, kernel = "polynomial", cost = 0.1, gamma = 3, coef0 = 0, degree = 1)
+plot(svmfit, repr)
+```
+
+Seems very bad, but we will decide that during model assessment
+
+
+### Only significant
+```{r}
+set.seed(0)
+# this will take the most
+tune.out <- tune(svm, y ~ ., data = df_only_significant, kernel = "polynomial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3),
+  coef0 = c(0, 1, 5, 10),
+  degree = c(1, 2, 3, 5)
+))
+# less options because of computational times and max iterations
+summary(tune.out)
+model_svm_p <- tune.out$best.model
+summary(model_svm_p)
+saveRDS(model_svm_p, file = "./model-selection-evaluation/Support_vector_machine_polynomial_only_significant.rds")
+```
+
+### No sentiment
+```{r}
+set.seed(0)
+# this will take the most
+tune.out <- tune(svm, y ~ ., data = df_no_sentiment, kernel = "polynomial", , probability = TRUE, ranges = list(
+  cost = c(0.001, 0.01, 0.1, 1, 10, 100),
+  gamma = c(0.5, 1, 2, 3),
+  coef0 = c(0, 1, 5, 10),
+  degree = c(1, 2, 3, 5)
+))
+# less options because of computational times and max iterations
+summary(tune.out)
+model_svm_p <- tune.out$best.model
+summary(model_svm_p)
+saveRDS(model_svm_p, file = "./model-selection-evaluation/Support_vector_machine_polynomial_no_sentiment.rds")
+```

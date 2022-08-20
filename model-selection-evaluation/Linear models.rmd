@@ -1,0 +1,170 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(MASS)
+
+df <- readRDS(file = "datasets/model_df.rds")
+df$y <- as.character(df$y)
+#df$y[df$y == "not-scam"] <- "0" # change response type
+#df$y[df$y == "scam"] <- "1" # change response type
+#df$y <- as.integer(df$y)
+# df$y <- droplevels(df$y)
+
+summary(df)
+
+
+```
+
+
+
+# Logistic regression
+
+```{r}
+lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
+  set_engine("glm") %>% # declare which package will be used to fit the model
+  set_mode("classification") # set model's mode to classification
+
+df$y <- as.factor(df$y)
+
+model_logr <- lr_spec %>%
+  fit(y ~ .,
+      data = df)
+
+summary(model_logr$fit)
+saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_FULL.rds")
+```
+
+# reduce df
+```{r}
+df_no_sentiment <- df %>% dplyr::select(y, Month, Day_number, Day, Hour, subject_capital_score,
+                                        subject_non_letter_score, subject_length, has_links)
+
+# now for the signif.
+# create dummies
+df_only_significant <- df
+df_only_significant$Month_aug <- df$Month == "aug"
+df_only_significant$Month_dec <- df$Month == "dec"
+df_only_significant$Month_jul <- df$Month == "jul"
+df_only_significant$Month_jun <- df$Month == "jun"
+df_only_significant$Month_oct <- df$Month == "oct"
+df_only_significant$Hour_13 <- df$Hour == 13
+df_only_significant$Hour_15 <- df$Hour == 15
+df_only_significant$Hour_16 <- df$Hour == 16
+df_only_significant$Hour_22 <- df$Hour == 22
+# select only useful stuff
+df_only_significant <- df_only_significant %>% dplyr::select(y, Month_aug, Month_dec, Month_jul, Month_jun,
+                                                             Month_oct, Hour_13, Hour_15, Hour_16, Hour_22,
+                                                             subject_non_letter_score, subject_length, has_links, Text_sadness)
+
+saveRDS(df_no_sentiment, "./datasets/df_training_no_sentiment.rds")
+saveRDS(df_only_significant, "./datasets/df_training_only_significant.rds")
+```
+
+```{r}
+lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
+    set_engine("glm") %>% # declare which package will be used to fit the model
+    set_mode("classification") # set model's mode to classification
+
+# df$y <- as.factor(df$y)
+
+model_logr <- lr_spec %>%
+    fit(y ~ .,
+        data = df_only_significant)
+
+summary(model_logr$fit)
+saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_reduced.rds")
+```
+
+```{r}
+# maybe we can further reduce
+df_only_significant <- df_only_significant %>% dplyr::select(y, Month_aug, Month_dec, Month_jul, Month_jun,
+                                                             Month_oct, Hour_16, Hour_22,
+                                                             subject_non_letter_score, subject_length, has_links, Text_sadness)
+lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
+    set_engine("glm") %>% # declare which package will be used to fit the model
+    set_mode("classification") # set model's mode to classification
+
+# df$y <- as.factor(df$y)
+
+model_logr <- lr_spec %>%
+    fit(y ~ .,
+        data = df_only_significant)
+
+summary(model_logr$fit)
+saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_reduced.rds")
+```
+
+
+```{r}
+# no sentiment
+
+lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
+    set_engine("glm") %>% # declare which package will be used to fit the model
+    set_mode("classification") # set model's mode to classification
+
+# df$y <- as.factor(df$y)
+
+model_logr <- lr_spec %>%
+    fit(y ~ .,
+        data = df_no_sentiment)
+
+summary(model_logr$fit)
+saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_no_sentiment.rds")
+```
+
+# LDA
+```{r}
+model_lda <- lda(y ~ ., data=df)
+model_lda
+saveRDS(model_lda, file = "model-selection-evaluation/LDA.rds")
+plot(model_lda)
+
+
+model_lda <- lda(y ~ ., data=df_only_significant)
+model_lda
+saveRDS(model_lda, file = "model-selection-evaluation/LDA_only_significant.rds")
+
+model_lda <- lda(y ~ ., data=df_no_sentiment)
+model_lda
+saveRDS(model_lda, file = "model-selection-evaluation/LDA_no_sentiment.rds")
+plot(model_lda)
+```
+# QDA
+```{r}
+
+# NB: rank deficiency in group 0, cannot be used
+# both for full and no sentiment
+model_qda <- qda(y ~ ., data=df)
+model_qda
+saveRDS(model_qda, file = "model-selection-evaluation/QDA.rds")
+```
+```{r}
+# NB: rank deficiency in group 0, cannot be used
+model_qda <- qda(y ~ ., data=df_only_significant)
+model_qda
+saveRDS(model_qda, file = "model-selection-evaluation/QDA_only_significant.rds")
+```
+
+
+# Naive bayes
+```{r}
+library(e1071)
+
+model_NB <- naiveBayes(formula = y ~ ., data = df)
+saveRDS(model_NB, file = "model-selection-evaluation/Naive_Bayes.rds")
+
+model_NB <- naiveBayes(formula = y ~ ., data = df_no_sentiment)
+saveRDS(model_NB, file = "model-selection-evaluation/Naive_Bayes_no_sentiment.rds")
+
+model_NB <- naiveBayes(formula = y ~ ., data = df_only_significant)
+saveRDS(model_NB, file = "model-selection-evaluation/Naive_Bayes_only_significant.rds")
+```

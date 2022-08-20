@@ -28,12 +28,13 @@ Here we are going to further preprocess the data in order to have a single final
 
 #Scam dataset
 
-file_names <- dir(path = "./datasets/scam", full.names = T)
+file_names <- dir(path = "./datasets/scam", full.names = T, include.dirs = FALSE)
+file_names <- file_names[!file.info(file_names)$isdir]
 scam_df <- do.call(rbind, lapply(file_names, read.csv))
 
-scam_df$From <- str_extract(string = scam_df$From, pattern = "<(.*?)>")
-scam_df$From <- str_replace(string = scam_df$From, pattern = "<", replacement = '')
-scam_df$From <- str_replace(string = scam_df$From, pattern = ">", replacement = '')
+#scam_df$From <- str_extract(string = scam_df$From, pattern = "<(.*?)>")
+#scam_df$From <- str_replace(string = scam_df$From, pattern = "<", replacement = '')
+#scam_df$From <- str_replace(string = scam_df$From, pattern = ">", replacement = '')
 
 na_indexes <- unique(
   c(
@@ -42,15 +43,55 @@ na_indexes <- unique(
     which(stri_isempty(scam_df$Text))
 ))# check for NAs in From, Date and Text. Subject can be empty
 
+
+
 # remove csv index and empty strings
-scam_df <- scam_df[-na_indexes, 2:5]
+if(length(na_indexes) != 0){
+   scam_df <- scam_df[-na_indexes, 2:5]
+} else {
+  scam_df <- scam_df[, 2:5]
+}
 
-# fix the from with only the email
-
+scam_df$Text <- stringi::stri_trans_general(scam_df$Text, "latin-ascii")
+scam_df$Subject <- stringi::stri_trans_general(scam_df$Subject, "latin-ascii")
 
 # add the y column
 scam_df$y <- rep(as.factor("scam"), nrow(scam_df))
 ```
+
+```{r}
+file_names <- dir(path = "./datasets/scam/2", full.names = T, include.dirs = FALSE)
+file_names <- file_names[!file.info(file_names)$isdir]
+scam_df2 <- do.call(rbind, lapply(file_names, read.csv))
+
+na_indexes <- unique(
+  c(
+    which(is.na(scam_df2$From)),
+    which(stri_isempty(scam_df2$Date)),
+    which(stri_isempty(scam_df2$Text))
+))# check for NAs in From, Date and Text. Subject can be empty
+
+# remove csv index and empty strings
+if(length(na_indexes) != 0){
+   scam_df2 <- scam_df2[-na_indexes, 2:5]
+} else {
+  scam_df2 <- scam_df2[, 2:5]
+}
+
+
+scam_df2$Text <- stringi::stri_trans_general(scam_df2$Text, "latin-ascii")
+scam_df2$Subject <- stringi::stri_trans_general(scam_df2$Subject, "latin-ascii")
+
+# add the y column
+scam_df2$y <- rep(as.factor("scam"), nrow(scam_df2))
+```
+
+```{r}
+scam_df <- rbind(scam_df, scam_df2)
+rm(scam_df2)
+```
+
+
 ```{r}
 #non-scam dataset
 file_names <- dir(path = "./datasets/pre-processed", full.names = T)
@@ -64,6 +105,10 @@ na_indexes <- unique(
 
 # remove csv index and empty strings
 non_scam_df <- non_scam_df[-na_indexes, 2:5]
+
+non_scam_df$Text <- stringi::stri_trans_general(non_scam_df$Text, "latin-ascii")
+non_scam_df$Subject <- stringi::stri_trans_general(non_scam_df$Subject, "latin-ascii")
+
 # add the y column
 non_scam_df$y <- rep(as.factor("not-scam"), nrow(non_scam_df))
 ```
@@ -75,13 +120,22 @@ final_df <- rbind(scam_df, non_scam_df)
 # date
 d <- NULL
 h <- NULL
+dn <- NULL
+m <- NULL
 
 
 date_approximated<- function (value = "18:00:28")
 {
-
-  value <- str_sub(value, start = 1, end = 5) # 18:00
+  if(grepl(pattern = "\\.", x=value))
+  {
+    # we have another format
+    ris <- unlist(str_split(value, pattern = "."))
+  } else {
+    value <- str_sub(value, start = 1, end = 5) # 18:00
   ris <- unlist(str_split(value, pattern = ":"))
+  }
+
+
   # simplify hour
   tryCatch(
   {
@@ -109,20 +163,33 @@ for (s in final_df$Date) {
 
   d <- c(d, str_sub(unlist(s)[2], start = 1, end = 3)) # days
   h <- c(h, date_approximated(s[6]))
+  dn <- c(dn, s[3])
+  m <- c(m, s[4])
 }
 
+final_df$Month <- m
+final_df$Day_number <- dn
 final_df$Day <- d
 final_df$Hour <- h
 final_df <- final_df[, -2]
+
 
 #delete NA hour
 na_indexes <- which(is.na(final_df$Hour))
 final_df <- final_df[-na_indexes,]
 
 # save
-write.csv(final_df, file = "datasets/final_df.csv")
-rm(na_indexes, file_names, non_scam_df, scam_df, h, s, d)
+saveRDS(final_df, file = "datasets/final_df.rds")
+# write.csv(final_df, file = "datasets/final_df.csv")
+rm(na_indexes, file_names, non_scam_df, scam_df, h, s, d, dn, m)
 ```
 ```{r}
 summary(as_tibble(final_df))
+```
+test
+```{r}
+test <- readRDS("datasets/final_df.rds")
+```
+```{r}
+rm(test)
 ```

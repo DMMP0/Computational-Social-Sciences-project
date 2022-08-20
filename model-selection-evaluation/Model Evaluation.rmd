@@ -1,0 +1,624 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(caret) # for confusion matrix
+library(ROCR) # for ROC curve
+library(glmnet) # GLM
+library(e1071) # SVM, naive Bayes
+library(kknn) # weighted knn
+library(tree) # simple and pruned trees
+library(randomForest) # rf
+library(caret) # boosting
+library(tidyverse)
+library(tidymodels)
+
+results <- data.frame(Method = "None", AUC = 0, Sensitivity = 0, Specificity = 0, PPV = 0, NPV = 0,
+                      DetectionRate = 0, DetectionPrevalence = 0, BalancedAccuracy = 0, SimpleAccuracy = 0,
+                      Precision = 0, Recall = 0, F1 = 0)
+
+df <- readRDS(file = "datasets/testing_df.rds")
+kind <- "FULL"
+```
+
+
+# Logistic Regression
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Logistic_regression_FULL.rds")
+# reminder of the summary
+summary(model)
+
+# for lr we need a numerical y
+predictions <- predict(model, new_data = df, type = "class")
+simple_accuracy <- mean(predictions$.pred_class == df$y)
+confusion_matrix <- table(predictions$.pred_class, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+
+
+# ROC
+# predict on the test set
+prob <- predict(model, new_data = df, type = "prob")
+prob <- prob$.pred_scam
+
+predob <- ROCR::prediction(prob, df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+# now the plot!
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Logistic Regression", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+
+```
+
+
+# KNN
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/KNN.rds")
+
+# accuracy
+simple_accuracy <- augment(model, new_data = df) %>%
+accuracy(truth = y, estimate = .pred_class)
+
+
+predictions <- predict(model, new_data = df, type = "class")
+simple_accuracy <- mean(predictions$.pred_class == df$y)
+confusion_matrix <- table(predictions$.pred_class, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+
+
+# ROC
+
+prob <- predict(model, new_data = df, type = "prob")
+prob <- prob$.pred_scam
+
+predob <- ROCR::prediction(prob, df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "KNN", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# LDA
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/LDA.rds")
+predictions <- predict(model, df) # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions$class == df$y)
+
+confusion_matrix <- table(predictions$class, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predictions$posterior[,1]
+
+predob <- ROCR::prediction(prob, df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "LDA", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# Naive Bayes
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Naive_Bayes.rds")
+predictions <- predict(model, df) # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df, type = 'raw')
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Naive Bayes", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+
+# Tree
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Simple_Tree.rds")
+predictions <- predict(model, df, type = "class") # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df)
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Simple Tree", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+
+```
+
+# Simple tree (pruned)
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Pruned_Tree.rds")
+predictions <- predict(model, df, type = "class") # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df)
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Pruned Tree", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# Bagging
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Bagging.rds")
+predictions <- predict(model, df, type = "class") # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df, type = "prob")
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Bagging", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# Random Forests
+```{r}
+
+model <- readRDS(file = "./model-selection-evaluation/Random_Forest.rds")
+predictions <- predict(model, df, type = "class") # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df, type = "prob")
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Random Forest", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+
+```
+
+# Boosting
+```{r}
+# NB: caret, not gbm
+
+df_tree <- df
+
+df_tree$y <- as.character(df_tree$y)
+df_tree$y[df_tree$y == "not-scam"] <- "not_scam"
+df_tree$y <- as.factor(df_tree$y)
+df_tree$y <- droplevels(df_tree$y)
+
+model <- readRDS(file = "./model-selection-evaluation/Boosting.rds")
+predictions <- predict(model, df_tree, type = "raw") # predictions
+
+# accuracy
+simple_accuracy <- mean(predictions == df_tree$y)
+
+confusion_matrix <- table(predictions, df_tree$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+
+prob <- predict(model, df_tree, type = "prob")
+
+predob <- ROCR::prediction(prob[,2], df_tree$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Boosting", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+
+# Maximal Margin Classifier
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Maximal_margin_classifier.rds")
+predictions <- predict(model, df_tree, probability = TRUE) # predictions
+
+# accuracy
+simple_accuracy <- mean(unlist(predictions) == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+predictions <- predict(model, df, probability = TRUE) # predictions
+prob <- as.data.frame(attr(predictions, "probabilities"))
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Maximal Margin Classifier", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# Support Vector Classifier
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_classifier.rds")
+predictions <- predict(model, df_tree, probability = TRUE) # predictions
+
+# accuracy
+simple_accuracy <- mean(unlist(predictions) == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+predictions <- predict(model, df, probability = TRUE) # predictions
+prob <- as.data.frame(attr(predictions, "probabilities"))
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "Support Vector Classifier", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+# Support Vector Machine
+
+## Radial
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_radial.rds")
+predictions <- predict(model, df_tree, probability = TRUE) # predictions
+
+# accuracy
+simple_accuracy <- mean(unlist(predictions) == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+predictions <- predict(model, df, probability = TRUE) # predictions
+prob <- as.data.frame(attr(predictions, "probabilities"))
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "SVM radial", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_sigmoid.rds")
+predictions <- predict(model, df_tree, probability = TRUE) # predictions
+
+# accuracy
+simple_accuracy <- mean(unlist(predictions) == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+predictions <- predict(model, df, probability = TRUE) # predictions
+prob <- as.data.frame(attr(predictions, "probabilities"))
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "SVM Sigmoid", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+
+```{r}
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_polynomial.rds")
+predictions <- predict(model, df_tree, probability = TRUE) # predictions
+
+# accuracy
+simple_accuracy <- mean(unlist(predictions) == df$y)
+
+confusion_matrix <- table(predictions, df$y)
+confusion_matrix <- confusionMatrix(confusion_matrix)
+
+# ROC
+predictions <- predict(model, df, probability = TRUE) # predictions
+prob <- as.data.frame(attr(predictions, "probabilities"))
+
+predob <- ROCR::prediction(prob[,1], df$y)
+perf <- ROCR::performance(predob, "tpr", "fpr")
+auc <- ROCR::performance(predob, measure = "auc")
+auc <- unlist(auc@y.values)
+
+plot(perf)
+abline(0, 1, col = "gray", lty = 2)
+
+
+ris <- data.frame(Method = "SVM Polynomial", AUC = auc,
+                  Sensitivity = confusion_matrix$byClass["Sensitivity"],
+                  Specificity = confusion_matrix$byClass["Specificity"],
+                  PPV = confusion_matrix$byClass["Pos Pred Value"],
+                  NPV = confusion_matrix$byClass["Neg Pred Value"],
+                  DetectionRate = confusion_matrix$byClass["Detection Rate"],
+                  DetectionPrevalence = confusion_matrix$byClass["Detection Prevalence"],
+                  BalancedAccuracy = confusion_matrix$byClass["Balanced Accuracy"],
+                  SimpleAccuracy = simple_accuracy,
+                  Precision = confusion_matrix$byClass[5],
+                  Recall = confusion_matrix$byClass["Recall"],
+                  F1 = confusion_matrix$byClass["F1"])
+
+results <- rbind(results,ris)
+```
+
+
+```{r}
+results <- results[-1,]
+write.csv(results, file = paste0("Results ",kind))
+```

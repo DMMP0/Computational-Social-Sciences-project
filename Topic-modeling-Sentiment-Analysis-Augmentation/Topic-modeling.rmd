@@ -1,0 +1,29 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+print("Loading...")
+library(tokenizers)
+# df <- readRDS(file = "datasets/final_df_augmented.rds")
+texts <- df$Lemmas
+# tokenize bigrams
+print("Tokenizing unigrams")
+texts_unigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 1L)
+print("Tokenizing bigrams")
+texts_bigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 2L)
+print("Tokenizing trigrams")
+texts_trigrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 3L)
+print("Tokenizing quadgrams")
+texts_quadgrams <- tokenize_ngrams(texts, lowercase = TRUE, n = 4L)
+print("Saving")
+saveRDS(texts_unigrams, file = "Topic-modeling-Sentiment-Analysis-Augmentation/tokenization-unigram-intermediate-saving.rds")
+saveRDS(texts_bigrams, file = "./Topic-modeling-Sentiment-Analysis-Augmentation/tokenization-bigram-intermediate-saving.rds")
+saveRDS(texts_trigrams, file = "./Topic-modeling-Sentiment-Analysis-Augmentation/tokenization-trigram-intermediate-saving.rds")
+saveRDS(texts_quadgrams, file = "./Topic-modeling-Sentiment-Analysis-Augmentation/tokenization-quadgram-intermediate-saving.rds")
+```
+```{r}
+library(topicmodels)
+library(textmineR)
+```
