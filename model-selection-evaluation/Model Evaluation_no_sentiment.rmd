@@ -20,14 +20,15 @@ results <- data.frame(Method = "None", AUC = 0, Sensitivity = 0, Specificity = 0
                       Precision = 0, Recall = 0, F1 = 0)
 
 df <- readRDS(file = "datasets/testing_df.rds")
-kind <- "FULL"
+df <- df[,1:9]
+kind <- "no_sentiment"
 ```
 
 
 # Logistic Regression
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Logistic_regression_FULL.rds")
+model <- readRDS(file = "./model-selection-evaluation/Logistic_regression_no_sentiment.rds")
 # reminder of the summary
 summary(model)
 
@@ -73,11 +74,11 @@ results <- rbind(results,ris)
 # KNN
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/KNN.rds")
+model <- readRDS(file = "./model-selection-evaluation/KNN_no_sentiment.rds")
 
 # accuracy
 simple_accuracy <- augment(model, new_data = df) %>%
-accuracy(truth = y, estimate = .pred_class)
+accuracy(truth = y, estimate = factor(.pred_class, levels = c("scam","not-scam")))
 
 
 predictions <- predict(model, new_data = df, type = "class")
@@ -119,7 +120,7 @@ results <- rbind(results,ris)
 # LDA
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/LDA.rds")
+model <- readRDS(file = "./model-selection-evaluation/LDA_no_sentiment.rds")
 predictions <- predict(model, df) # predictions
 
 # accuracy
@@ -162,7 +163,7 @@ results <- rbind(results,ris)
 # Naive Bayes
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Naive_Bayes.rds")
+model <- readRDS(file = "./model-selection-evaluation/Naive_Bayes_no_sentiment.rds")
 predictions <- predict(model, df) # predictions
 
 # accuracy
@@ -205,7 +206,7 @@ results <- rbind(results,ris)
 
 # Tree
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Simple_Tree.rds")
+model <- readRDS(file = "./model-selection-evaluation/Simple_Tree_no_sentiment.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -220,7 +221,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -247,7 +248,7 @@ results <- rbind(results,ris)
 
 # Simple tree (pruned)
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Pruned_Tree.rds")
+model <- readRDS(file = "./model-selection-evaluation/Pruned_Tree_no_sentiment.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -262,7 +263,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -289,7 +290,7 @@ results <- rbind(results,ris)
 # Bagging
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Bagging.rds")
+model <- readRDS(file = "./model-selection-evaluation/Bagging_no_sentiment.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -304,7 +305,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -331,7 +332,7 @@ results <- rbind(results,ris)
 # Random Forests
 ```{r}
 
-model <- readRDS(file = "./model-selection-evaluation/Random_Forest.rds")
+model <- readRDS(file = "./model-selection-evaluation/Random_Forest_no_sentiment.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -346,7 +347,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -382,7 +383,7 @@ df_tree$y[df_tree$y == "not-scam"] <- "not_scam"
 df_tree$y <- as.factor(df_tree$y)
 df_tree$y <- droplevels(df_tree$y)
 
-model <- readRDS(file = "./model-selection-evaluation/Boosting.rds")
+model <- readRDS(file = "./model-selection-evaluation/Boosting_no_sentiment.rds")
 predictions <- predict(model, df_tree, type = "raw") # predictions
 
 # accuracy
@@ -423,7 +424,7 @@ results <- rbind(results,ris)
 
 # Maximal Margin Classifier
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Maximal_margin_classifier.rds")
+model <- readRDS(file = "./model-selection-evaluation/Maximal_margin_classifier_no_sentiment.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -438,7 +439,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -464,7 +465,7 @@ results <- rbind(results,ris)
 
 # Support Vector Classifier
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_classifier.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_classifier_no_sentiment.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -507,7 +508,7 @@ results <- rbind(results,ris)
 
 ## Radial
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_radial.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_radial_no_sentiment.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -548,7 +549,7 @@ results <- rbind(results,ris)
 
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_sigmoid.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_sigmoid_no_sentiment.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -589,7 +590,7 @@ results <- rbind(results,ris)
 
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_polynomial.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_polynomial_no_sentiment.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -634,3 +635,8 @@ results <- results[-1,]
 write.csv(results, file = paste0("Results_",kind,".csv"))
 results
 ```
+
+
+
+
+

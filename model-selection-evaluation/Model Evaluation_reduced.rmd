@@ -20,14 +20,27 @@ results <- data.frame(Method = "None", AUC = 0, Sensitivity = 0, Specificity = 0
                       Precision = 0, Recall = 0, F1 = 0)
 
 df <- readRDS(file = "datasets/testing_df.rds")
-kind <- "FULL"
+df$Month_aug <- df$Month == "aug"
+df$Month_dec <- df$Month == "dec"
+df$Month_jul <- df$Month == "jul"
+df$Month_jun <- df$Month == "jun"
+df$Month_oct <- df$Month == "oct"
+df$Hour_13 <- df$Hour == 13
+df$Hour_15 <- df$Hour == 15
+df$Hour_16 <- df$Hour == 16
+df$Hour_22 <- df$Hour == 22
+# select only useful stuff
+df <- df %>% dplyr::select(y, Month_aug, Month_dec, Month_jul, Month_jun,
+                           Month_oct, Hour_13, Hour_15, Hour_16, Hour_22,
+                           subject_non_letter_score, subject_length, has_links, Text_sadness)
+kind <- "reduced"
 ```
 
 
 # Logistic Regression
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Logistic_regression_FULL.rds")
+model <- readRDS(file = "./model-selection-evaluation/Logistic_regression_reduced.rds")
 # reminder of the summary
 summary(model)
 
@@ -73,11 +86,11 @@ results <- rbind(results,ris)
 # KNN
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/KNN.rds")
+model <- readRDS(file = "./model-selection-evaluation/KNN_only_significant.rds")
 
 # accuracy
 simple_accuracy <- augment(model, new_data = df) %>%
-accuracy(truth = y, estimate = .pred_class)
+accuracy(truth = y, estimate = factor(.pred_class, levels = c("scam", "not-scam")))
 
 
 predictions <- predict(model, new_data = df, type = "class")
@@ -119,7 +132,7 @@ results <- rbind(results,ris)
 # LDA
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/LDA.rds")
+model <- readRDS(file = "./model-selection-evaluation/LDA_only_significant.rds")
 predictions <- predict(model, df) # predictions
 
 # accuracy
@@ -162,7 +175,7 @@ results <- rbind(results,ris)
 # Naive Bayes
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Naive_Bayes.rds")
+model <- readRDS(file = "./model-selection-evaluation/Naive_Bayes_only_significant.rds")
 predictions <- predict(model, df) # predictions
 
 # accuracy
@@ -205,7 +218,7 @@ results <- rbind(results,ris)
 
 # Tree
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Simple_Tree.rds")
+model <- readRDS(file = "./model-selection-evaluation/Simple_Tree_only_significant.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -220,7 +233,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -247,7 +260,7 @@ results <- rbind(results,ris)
 
 # Simple tree (pruned)
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Pruned_Tree.rds")
+model <- readRDS(file = "./model-selection-evaluation/Pruned_Tree_only_significant.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -262,7 +275,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -289,7 +302,7 @@ results <- rbind(results,ris)
 # Bagging
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Bagging.rds")
+model <- readRDS(file = "./model-selection-evaluation/Bagging_only_significant.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -304,7 +317,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -331,7 +344,7 @@ results <- rbind(results,ris)
 # Random Forests
 ```{r}
 
-model <- readRDS(file = "./model-selection-evaluation/Random_Forest.rds")
+model <- readRDS(file = "./model-selection-evaluation/Random_Forest_only_significant.rds")
 predictions <- predict(model, df, type = "class") # predictions
 
 # accuracy
@@ -346,7 +359,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[,2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -382,7 +395,7 @@ df_tree$y[df_tree$y == "not-scam"] <- "not_scam"
 df_tree$y <- as.factor(df_tree$y)
 df_tree$y <- droplevels(df_tree$y)
 
-model <- readRDS(file = "./model-selection-evaluation/Boosting.rds")
+model <- readRDS(file = "./model-selection-evaluation/Boosting_only_significant.rds")
 predictions <- predict(model, df_tree, type = "raw") # predictions
 
 # accuracy
@@ -423,7 +436,7 @@ results <- rbind(results,ris)
 
 # Maximal Margin Classifier
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Maximal_margin_classifier.rds")
+model <- readRDS(file = "./model-selection-evaluation/Maximal_margin_classifier_only_significant.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -464,7 +477,7 @@ results <- rbind(results,ris)
 
 # Support Vector Classifier
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_classifier.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_classifier_only_significant.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -507,7 +520,7 @@ results <- rbind(results,ris)
 
 ## Radial
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_radial.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_radial_only_significant.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -548,7 +561,7 @@ results <- rbind(results,ris)
 
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_sigmoid.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_sigmoid_only_significant.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
@@ -589,7 +602,7 @@ results <- rbind(results,ris)
 
 
 ```{r}
-model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_polynomial.rds")
+model <- readRDS(file = "./model-selection-evaluation/Support_vector_machine_polynomial_only_significant.rds")
 predictions <- predict(model, df_tree, probability = TRUE) # predictions
 
 # accuracy
