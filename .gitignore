@@ -3,6 +3,8 @@ Topic-modeling-Sentiment-Analysis-Augmentation/*.rds
 model-selection-evaluation/*.rds
 stefano
 *.png
+Results FULL
+*.zip
 
 ### R template
 # History files
