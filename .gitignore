@@ -1,6 +1,8 @@
 datasets/
-Topic_modeling/*.rds
-scraping/stefano
+Topic-modeling-Sentiment-Analysis-Augmentation/*.rds
+model-selection-evaluation/*.rds
+stefano
+*.png
 
 ### R template
 # History files
