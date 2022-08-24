@@ -7,18 +7,12 @@ output: html_notebook
 
 Load libraries
 ```{r}
-# remotes::install_github("news-r/gensimr")
-library(quanteda)
 library(textstem)
 library(stringr)
-library(tidytext)
 library(stopwords)
 stop_w <- stopwords::stopwords(language = 'en')
 library(dplyr)
-library(text2vec)
-library(tm)
-library(tokenizers)
-library(lubridate)
+
 ```
 
 Sample from datasets ?
@@ -59,7 +53,7 @@ library(stringi)
 # df$From <- iconv(df$From, "UTF-8", "UTF-8",sub='') # ^ doesn't work in some cases
 df$domain <- str_sub(str_extract(df$From, pattern = "@.*\\."), start = 2L, end = -2L)
 df <- df %>%
-    mutate_at(vars(From, domain), function(x){gsub('[^ -~]', '', x)})
+  mutate_at(vars(From, domain), function(x) { gsub('[^ -~]', '', x) })
 # Encoding(df$domain) <- "UTF-8"
 # df$domain <- iconv(df$domain, "UTF-8", "UTF-8",sub='') # ^ doesn't work in some cases
 # df$domain <- stri_enc_toutf8(df$domain)
@@ -86,14 +80,14 @@ m <- str_to_lower(month.abb)
 df$Month <- as.character(df$Month)
 df$Month <- str_to_lower(df$Month)
 NA_ind <- which(!(df$Month %in% m))
-if(length(NA_ind != 0)) {df <- df[-NA_ind,]}
+if (length(NA_ind != 0)) { df <- df[-NA_ind,] }
 df$Month <- as.factor(df$Month)
 
-m <- str_to_lower(c("Fri" ,"Mon",   "Sat",   "Sun" ,  "Thu",   "Tue",   "Wed" ))
+m <- str_to_lower(c("Fri", "Mon", "Sat", "Sun", "Thu", "Tue", "Wed"))
 df$Day <- as.character(df$Day)
 df$Day <- str_to_lower(df$Day)
 NA_ind <- which(!(df$Day %in% m))
-if(length(NA_ind != 0)) {df <- df[-NA_ind,]}
+if (length(NA_ind != 0)) { df <- df[-NA_ind,] }
 df$Day <- as.factor(df$Day)
 df$Day <- droplevels(df$Day)
 
@@ -101,17 +95,17 @@ m <- as.character(1:31)
 df$Day_number <- as.character(df$Day_number)
 df$Day_number <- str_replace(df$Day_number, pattern = ",", replacement = "")
 NA_ind <- which(unlist(str_detect(df$Day_number, pattern = "0.")))
-if(length(NA_ind != 0)) {
+if (length(NA_ind != 0)) {
   df$Day_number[NA_ind] <- str_sub(df$Day_number[NA_ind], start = 2L)
   df$Day_number <- as.factor(df$Day_number)
 }
-NA_ind <- which(df$Day_number== 0)
-if(length(NA_ind != 0)) {
+NA_ind <- which(df$Day_number == 0)
+if (length(NA_ind != 0)) {
   df <- df[-NA_ind,]
   df$Day_number <- droplevels(df$Day_number)
 }
 NA_ind <- which(df$Hour == 24)
-if(length(NA_ind != 0)) {
+if (length(NA_ind != 0)) {
   df$Hour[NA_ind] <- 0
   df$Hour <- droplevels(df$Hour)
 }
@@ -219,7 +213,7 @@ l <- rep.int(0, nrow(df))
 h <- str_which(texts, pattern = "https?")
 l[h] <- 1
 df$has_links <- l
-rm(l,h)
+rm(l, h)
 
 ```
 Remove non characters from lemmas
@@ -292,7 +286,7 @@ print("Calculating most frequent words")
 most_frequent_words <- NULL
 for (lemmatized_email in df$Lemmas_subjects)
 {
-  if(lemmatized_email == ""){
+  if (lemmatized_email == "") {
     most_frequent_words <- c(most_frequent_words, " ")
     next
   }
@@ -324,8 +318,8 @@ wordcloud2(data = as.data.frame(table(df$MCW_subject[df$y != "scam"])), size = 0
 This common word however will haunt us with curse of dimensionality, so we van simplyfiy some
 
 ```{r}
-levels(df$MCW) <- c(levels(df$MCW),"None")
-levels(df$MCW_subject) <- c(levels(df$MCW_subject),"None")
+levels(df$MCW) <- c(levels(df$MCW), "None")
+levels(df$MCW_subject) <- c(levels(df$MCW_subject), "None")
 
 indexes <- which(str_length(as.character(df$MCW)) < 3)
 df$MCW[indexes] <- "None"
@@ -337,13 +331,13 @@ df$MCW_subject[indexes] <- "None"
 Further removing less common words to top 100
 ```{r}
 # df <- readRDS(file = "datasets/final_df_augmented.rds")
-scam <- summary(df$MCW_subject[df$y=="scam"])[1:99]
-not_scam <- summary(df$MCW_subject[df$y!="scam"])[1:99]
+scam <- summary(df$MCW_subject[df$y == "scam"])[1:99]
+not_scam <- summary(df$MCW_subject[df$y != "scam"])[1:99]
 
 
-for(i in nrow(df)){
+for (i in nrow(df)) {
 
-  if(as.character(df[i,]$MCW_subject) %in% names(scam) || as.character(df[i,]$MCW_subject) %in% names(not_scam)){
+  if (as.character(df[i,]$MCW_subject) %in% names(scam) || as.character(df[i,]$MCW_subject) %in% names(not_scam)) {
     next
   } else {
     df$MCW_subject[i] <- "None"
@@ -364,31 +358,31 @@ library(syuzhet)
 print("Calculating subjects sentiments")
 sentiments_subject <- get_nrc_sentiment(df$Lemmas_subjects)
 names(sentiments_subject) <- c(
-        "Subject_anger",
-        "Subject_anticipation",
-        "Subject_disgust",
-        "Subject_fear",
-        "Subject_joy",
-        "Subject_sadness",
-        "Subject_surprise",
-        "Subject_trust",
-        "Subject_negative",
-        "Subject_positive"
+  "Subject_anger",
+  "Subject_anticipation",
+  "Subject_disgust",
+  "Subject_fear",
+  "Subject_joy",
+  "Subject_sadness",
+  "Subject_surprise",
+  "Subject_trust",
+  "Subject_negative",
+  "Subject_positive"
 )
 
 print("Calculating text sentiments")
 text_sentiment <- get_nrc_sentiment(df$Lemmas)
 names(text_sentiment) <- c(
-        "Text_anger",
-        "Text_anticipation",
-        "Text_disgust",
-        "Text_fear",
-        "Text_joy",
-        "Text_sadness",
-        "Text_surprise",
-        "Text_trust",
-        "Text_negative",
-        "Text_positive"
+  "Text_anger",
+  "Text_anticipation",
+  "Text_disgust",
+  "Text_fear",
+  "Text_joy",
+  "Text_sadness",
+  "Text_surprise",
+  "Text_trust",
+  "Text_negative",
+  "Text_positive"
 )
 
 head(sentiments_subject)
@@ -432,13 +426,13 @@ print(paste("Average sentiment score across non scam emails:",
 We can see that scam emails are generally more emotional than normal ones
 
 ```{r}
-t.test(x= df$Text_trust[df$y == 'scam'], y=df$Text_trust[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+t.test(x = df$Text_trust[df$y == 'scam'], y = df$Text_trust[df$y != 'scam'], alternative = "two.sided", mu = 0)
 
-t.test(x= df$Text_positive[df$y == 'scam'], y=df$Text_positive[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+t.test(x = df$Text_positive[df$y == 'scam'], y = df$Text_positive[df$y != 'scam'], alternative = "two.sided", mu = 0)
 
-t.test(x= df$Text_negative[df$y == 'scam'], y=df$Text_negative[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+t.test(x = df$Text_negative[df$y == 'scam'], y = df$Text_negative[df$y != 'scam'], alternative = "two.sided", mu = 0)
 
-t.test(x= unlist(df[df$y == 'scam', seq(from = 18, to = 37)]), y=unlist(df[df$y != 'scam', seq(from = 18, to = 37)]), alternative = "two.sided", mu= 0 )
+t.test(x = unlist(df[df$y == 'scam', seq(from = 18, to = 37)]), y = unlist(df[df$y != 'scam', seq(from = 18, to = 37)]), alternative = "two.sided", mu = 0)
 
 ```
 
