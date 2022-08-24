@@ -9,3 +9,5 @@ Directories are structured in the following way:
 3. _Sentiment-Analysis-Augmentation_ builds the sentiment part of the dataset, also further polishing it;
 4. _model-selection-evaluation_ train and test the models ensemble
 5. _results_ contains the .csv with the performance tables
+
+The full report can be found here at the top level.
