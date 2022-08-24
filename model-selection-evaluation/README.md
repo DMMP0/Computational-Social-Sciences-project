@@ -27,3 +27,21 @@ It utilizes the following R libraries:
 
 ## KNN
 
+This notebook tunes and trains the K-Nearest Neighbours.
+
+It utilizes the following R libraries:
+
+1. **tidyverse**, for most useful data manipulation
+2. **tidymodels** and **kknn**, for building the model
+3. **ggplot2**, for visualization
+
+
+This notebook trains Logistic Regression, Linear Discriminant Analysis,
+Quadratic Discriminant Analysis and Naive Bayes.
+
+It utilizes the following R libraries:
+
+1. **tidyverse**, for most useful data manipulation
+2. **tidymodels**, for logistic regression
+3. **MASS**, for LDA and QDA
+4. **e1071**, for Naive Bayes
