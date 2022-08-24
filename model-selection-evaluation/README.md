@@ -49,7 +49,7 @@ It utilizes the following R libraries:
 
 ## SVM
 
-This notebook trains and tunes Maximal Margin Classifier, Support Vector Classifier, 
+This notebook trains and tunes Maximal Margin Classifier, Support Vector Classifier,
 Radial Support Vector Machine, Sigmoid Support Vector Machine, Polynomial Support Vector Machine..
 
 It utilizes the following R libraries:
@@ -57,3 +57,14 @@ It utilizes the following R libraries:
 1. **tidyverse**, for most useful data manipulation
 2. **e1071**, for SVMs
 3. **umap**, **dplyr**, **ggplot2** and **plotly** for data visualization.
+
+## Model Assessment
+
+These notebooks evaluate the performance of the models. There are 3 notebooks just for convenience,
+in the future I may compress everything into one.
+
+They utilize the following R libraries:
+
+1. All the previously cited ones for predicting
+2. **ROCR**, for the ROC curve
+3. **caret** specifically, for computing all statistics of the confusion matrix
