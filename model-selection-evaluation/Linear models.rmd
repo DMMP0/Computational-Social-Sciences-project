@@ -43,7 +43,7 @@ summary(model_logr$fit)
 saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_FULL.rds")
 ```
 
-# reduce df
+## reduce df
 ```{r}
 df_no_sentiment <- df %>% dplyr::select(y, Month, Day_number, Day, Hour, subject_capital_score,
                                         subject_non_letter_score, subject_length, has_links)
@@ -71,14 +71,14 @@ saveRDS(df_only_significant, "./datasets/df_training_only_significant.rds")
 
 ```{r}
 lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
-    set_engine("glm") %>% # declare which package will be used to fit the model
-    set_mode("classification") # set model's mode to classification
+  set_engine("glm") %>% # declare which package will be used to fit the model
+  set_mode("classification") # set model's mode to classification
 
 # df$y <- as.factor(df$y)
 
 model_logr <- lr_spec %>%
-    fit(y ~ .,
-        data = df_only_significant)
+  fit(y ~ .,
+      data = df_only_significant)
 
 summary(model_logr$fit)
 saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_reduced.rds")
@@ -90,14 +90,14 @@ df_only_significant <- df_only_significant %>% dplyr::select(y, Month_aug, Month
                                                              Month_oct, Hour_16, Hour_22,
                                                              subject_non_letter_score, subject_length, has_links, Text_sadness)
 lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
-    set_engine("glm") %>% # declare which package will be used to fit the model
-    set_mode("classification") # set model's mode to classification
+  set_engine("glm") %>% # declare which package will be used to fit the model
+  set_mode("classification") # set model's mode to classification
 
 # df$y <- as.factor(df$y)
 
 model_logr <- lr_spec %>%
-    fit(y ~ .,
-        data = df_only_significant)
+  fit(y ~ .,
+      data = df_only_significant)
 
 summary(model_logr$fit)
 saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_reduced.rds")
@@ -108,14 +108,14 @@ saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_reduc
 # no sentiment
 
 lr_spec <- logistic_reg() %>% # define a generalized linear model for binary outcomes
-    set_engine("glm") %>% # declare which package will be used to fit the model
-    set_mode("classification") # set model's mode to classification
+  set_engine("glm") %>% # declare which package will be used to fit the model
+  set_mode("classification") # set model's mode to classification
 
 # df$y <- as.factor(df$y)
 
 model_logr <- lr_spec %>%
-    fit(y ~ .,
-        data = df_no_sentiment)
+  fit(y ~ .,
+      data = df_no_sentiment)
 
 summary(model_logr$fit)
 saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_no_sentiment.rds")
@@ -123,17 +123,17 @@ saveRDS(model_logr, file = "model-selection-evaluation/Logistic_regression_no_se
 
 # LDA
 ```{r}
-model_lda <- lda(y ~ ., data=df)
+model_lda <- lda(y ~ ., data = df)
 model_lda
 saveRDS(model_lda, file = "model-selection-evaluation/LDA.rds")
 plot(model_lda)
 
 
-model_lda <- lda(y ~ ., data=df_only_significant)
+model_lda <- lda(y ~ ., data = df_only_significant)
 model_lda
 saveRDS(model_lda, file = "model-selection-evaluation/LDA_only_significant.rds")
 
-model_lda <- lda(y ~ ., data=df_no_sentiment)
+model_lda <- lda(y ~ ., data = df_no_sentiment)
 model_lda
 saveRDS(model_lda, file = "model-selection-evaluation/LDA_no_sentiment.rds")
 plot(model_lda)
@@ -143,13 +143,13 @@ plot(model_lda)
 
 # NB: rank deficiency in group 0, cannot be used
 # both for full and no sentiment
-model_qda <- qda(y ~ ., data=df)
+model_qda <- qda(y ~ ., data = df)
 model_qda
 saveRDS(model_qda, file = "model-selection-evaluation/QDA.rds")
 ```
 ```{r}
 # NB: rank deficiency in group 0, cannot be used
-model_qda <- qda(y ~ ., data=df_only_significant)
+model_qda <- qda(y ~ ., data = df_only_significant)
 model_qda
 saveRDS(model_qda, file = "model-selection-evaluation/QDA_only_significant.rds")
 ```
