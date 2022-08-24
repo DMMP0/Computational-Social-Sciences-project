@@ -32,8 +32,8 @@ df$has_links <- as.factor(df$has_links)
 #reduce dataset size
 print("sampling")
 #due to the disparity, mantaining the disproportion is important
-scam_df <- df[df$y=="scam",]
-non_scam_df <- df[df$y!="scam",]
+scam_df <- df[df$y == "scam",]
+non_scam_df <- df[df$y != "scam",]
 
 id_s <- sample(seq_len(nrow(scam_df)), size = 700)
 scam_df <- scam_df[id_s,]
@@ -42,7 +42,7 @@ id_ns <- sample(seq_len(nrow(non_scam_df)), size = 300)
 non_scam_df <- non_scam_df[id_ns,]
 
 ids <- c(id_s, id_ns)
-df <- rbind(scam_df,non_scam_df)
+df <- rbind(scam_df, non_scam_df)
 
 rm(id_s, id_ns, scam_df, non_scam_df)
 
@@ -52,10 +52,6 @@ saveRDS(df, file = "datasets/model_df.rds")
 
 ```
 
-# reduced df
-```{r}
-
-```
 
 # Testing
 ```{r}
@@ -67,8 +63,8 @@ df <- df[-ids,]
 
 
 
-scam_df <- df[df$y=="scam",]
-non_scam_df <- df[df$y!="scam",]
+scam_df <- df[df$y == "scam",]
+non_scam_df <- df[df$y != "scam",]
 
 id_s <- sample(seq_len(nrow(scam_df)), size = 700)
 scam_df <- scam_df[id_s,]
@@ -77,7 +73,7 @@ id_ns <- sample(seq_len(nrow(non_scam_df)), size = 300)
 non_scam_df <- non_scam_df[id_ns,]
 
 ids <- c(id_s, id_ns)
-df <- rbind(scam_df,non_scam_df)
+df <- rbind(scam_df, non_scam_df)
 
 print("removing")
 #select variable of interest (by removing others)
