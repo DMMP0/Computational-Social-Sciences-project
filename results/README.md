@@ -4,7 +4,7 @@ This directory contains the performances for: full model, model without sentimen
 
 The computed performances are:
 
-1. AUC
+1. AUC (Area Under the Curve)
 2. Sensitivity
 3. Specificity
 4. PPV
