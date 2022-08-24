@@ -19,9 +19,8 @@ knitr::opts_chunk$set(warning = FALSE,
                       tidy.opts = list(width.cutoff = 60),
                       tidy = TRUE)
 library(tidyverse)
-library(stringi)
+library(stringr)
 library(rvest)
-library(DT)
 library(gsubfn)
 ```
 
