@@ -35,13 +35,25 @@ It utilizes the following R libraries:
 2. **tidymodels** and **kknn**, for building the model
 3. **ggplot2**, for visualization
 
+## Tree Methods
 
-This notebook trains Logistic Regression, Linear Discriminant Analysis,
-Quadratic Discriminant Analysis and Naive Bayes.
+This notebook trains and tunes Simple classification trees, Pruned trees, Bagged trees,
+Random Forests and Boosted Trees.
 
 It utilizes the following R libraries:
 
 1. **tidyverse**, for most useful data manipulation
-2. **tidymodels**, for logistic regression
-3. **MASS**, for LDA and QDA
-4. **e1071**, for Naive Bayes
+2. **tree**, for simple and pruned tree
+3. **randomForest**, for random forests and bagging
+4. **caret**, for boosted trees
+
+## SVM
+
+This notebook trains and tunes Maximal Margin Classifier, Support Vector Classifier, 
+Radial Support Vector Machine, Sigmoid Support Vector Machine, Polynomial Support Vector Machine..
+
+It utilizes the following R libraries:
+
+1. **tidyverse**, for most useful data manipulation
+2. **e1071**, for SVMs
+3. **umap**, **dplyr**, **ggplot2** and **plotly** for data visualization.

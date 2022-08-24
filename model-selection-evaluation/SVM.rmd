@@ -5,7 +5,7 @@ output: html_notebook
 
 # SVM
 
-# read dataset
+#3 read dataset
 ```{r}
 df <- readRDS(file = "datasets/model_df.rds")
 df_no_sentiment <- readRDS(file = "datasets/df_training_no_sentiment.rds")
@@ -45,7 +45,7 @@ for (i in seq_len(ncol(plot_df))) {
 
 # 3D plot
 sumap <- umap(plot_df, n_components = 3, n_neighbors = 10, min_dist = 0.001, y = plot_df$y,
-               target_weight = 0.5, n_epochs = 50)
+              target_weight = 0.5, n_epochs = 50)
 repr <- as.data.frame(sumap$layout)
 
 plot_y <- sumap$config$y
