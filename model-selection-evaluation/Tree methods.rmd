@@ -40,7 +40,7 @@ model_tree <- tree(y ~ ., data = df_tree)
 summary(model_tree)
 plot(model_tree)
 text(model_tree, pretty=0)
-title(main="Tree model for scam emails", sub = "Unpruned regression tree")
+title(main="Tree model for scam emails", sub = "Unpruned classification tree")
 saveRDS(model_tree, file = "model-selection-evaluation/Simple_Tree.rds")
 ```
 

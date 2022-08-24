@@ -407,7 +407,7 @@ saveRDS(df, file = "datasets/final_df_augmented.rds")
 
 
 ```{r}
-# df <- readRDS(file = "datasets/final_df_augmented.rds")
+df <- readRDS(file = "datasets/final_df_augmented.rds")
 print(paste("Average trust score across scam emails:", mean(df$Text_trust[df$y == 'scam'])))
 print(paste("Average trust score across non scam emails:", mean(df$Text_trust[df$y != 'scam'])))
 
@@ -433,6 +433,12 @@ We can see that scam emails are generally more emotional than normal ones
 
 ```{r}
 t.test(x= df$Text_trust[df$y == 'scam'], y=df$Text_trust[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+
+t.test(x= df$Text_positive[df$y == 'scam'], y=df$Text_positive[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+
+t.test(x= df$Text_negative[df$y == 'scam'], y=df$Text_negative[df$y != 'scam'], alternative = "two.sided", mu= 0 )
+
+t.test(x= unlist(df[df$y == 'scam', seq(from = 18, to = 37)]), y=unlist(df[df$y != 'scam', seq(from = 18, to = 37)]), alternative = "two.sided", mu= 0 )
 
 ```
 

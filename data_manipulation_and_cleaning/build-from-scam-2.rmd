@@ -42,7 +42,7 @@ text_trigger <- "^\\s*$" # new lines, they are too different
 ```{r}
 # I preferred to change here instead of doing another loop with 2 lists
 directories <- list.dirs(path = root_directories[13], full.names = TRUE, recursive = FALSE) # we only want the first one
-save_name <- "./datasets/scam/2/2022.csv"
+save_name <- "./datasets/scam/2/2022.csv" # done: 1998, 2020
 ```
 
 ```{r}
