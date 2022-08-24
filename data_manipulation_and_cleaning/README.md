@@ -22,3 +22,9 @@ It utilizes the following R libraries:
 
 ## Pre-process datasets
 
+This notebook is used to parse intermediate datasets into the final one.
+
+It utilizes the following R libraries:
+
+1. **stringi** and **stringr** for string manipulation
+2. **dplyr** for tibbles 

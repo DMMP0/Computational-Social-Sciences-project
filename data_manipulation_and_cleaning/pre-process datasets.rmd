@@ -41,13 +41,13 @@ na_indexes <- unique(
     which(is.na(scam_df$From)),
     which(stri_isempty(scam_df$Date)),
     which(stri_isempty(scam_df$Text))
-))# check for NAs in From, Date and Text. Subject can be empty
+  ))# check for NAs in From, Date and Text. Subject can be empty
 
 
 
 # remove csv index and empty strings
-if(length(na_indexes) != 0){
-   scam_df <- scam_df[-na_indexes, 2:5]
+if (length(na_indexes) != 0) {
+  scam_df <- scam_df[-na_indexes, 2:5]
 } else {
   scam_df <- scam_df[, 2:5]
 }
@@ -69,11 +69,11 @@ na_indexes <- unique(
     which(is.na(scam_df2$From)),
     which(stri_isempty(scam_df2$Date)),
     which(stri_isempty(scam_df2$Text))
-))# check for NAs in From, Date and Text. Subject can be empty
+  ))# check for NAs in From, Date and Text. Subject can be empty
 
 # remove csv index and empty strings
-if(length(na_indexes) != 0){
-   scam_df2 <- scam_df2[-na_indexes, 2:5]
+if (length(na_indexes) != 0) {
+  scam_df2 <- scam_df2[-na_indexes, 2:5]
 } else {
   scam_df2 <- scam_df2[, 2:5]
 }
@@ -124,31 +124,31 @@ dn <- NULL
 m <- NULL
 
 
-date_approximated<- function (value = "18:00:28")
+date_approximated <- function(value = "18:00:28")
 {
-  if(grepl(pattern = "\\.", x=value))
+  if (grepl(pattern = "\\.", x = value))
   {
     # we have another format
     ris <- unlist(str_split(value, pattern = "."))
   } else {
     value <- str_sub(value, start = 1, end = 5) # 18:00
-  ris <- unlist(str_split(value, pattern = ":"))
+    ris <- unlist(str_split(value, pattern = ":"))
   }
 
 
   # simplify hour
   tryCatch(
   {
-    if(as.integer(ris[2]) > 45){
-      ris <- as.integer(ris[1]) + 1}
-    else{
-      ris <- as.integer(ris[1])}
+    if (as.integer(ris[2]) > 45) {
+      ris <- as.integer(ris[1]) + 1 }
+    else {
+      ris <- as.integer(ris[1]) }
   },
     error = function(e) {
       print("Error while reading")
     })
-  if(is.numeric(ris)){
-    if(ris < 2000)
+  if (is.numeric(ris)) {
+    if (ris < 2000)
     {
       return(as.character(ris))
     }
