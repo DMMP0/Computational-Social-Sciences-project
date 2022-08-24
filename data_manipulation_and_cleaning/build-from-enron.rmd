@@ -64,7 +64,7 @@ save_name <- "datasets/pre-processed/non-scam-enron_personal.csv"
 ```
 Actual building
 ```{r}
-for(directory in directories)
+for (directory in directories)
 {
   emails <- list.files(directory, full.names = TRUE, recursive = TRUE)
   for (email in emails)
@@ -77,7 +77,7 @@ for(directory in directories)
     text_started <- FALSE # email text has started
 
     # open file connection
-    if (is.null(email)) {next}
+    if (is.null(email)) { next }
     file_connection <- file(description = email, open = "r", blocking = TRUE)
     # Loop till the line is the empty vector, character(0).
     repeat
