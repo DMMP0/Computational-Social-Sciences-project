@@ -45,7 +45,8 @@ get_email_urls <- function(url)
     read_html(url),
     error = function(e)
     {
-      print("Page does not exists")
+      print("Page does not exists: ")
+      print(e, quote = TRUE)
       return(NULL)
     }
   )
@@ -70,7 +71,7 @@ get_email_urls <- function(url)
 
   # add link text
   result <- paste(html_attrs(links))
-  if(str_sub(result,start = -1, end = -1) == 't')  # sometimes there is no list, so the url ends up with "what"
+  if (str_sub(result, start = -1, end = -1) == 't')  # sometimes there is no list, so the url ends up with "what"
     return(0)
   else
     return(result)
@@ -82,7 +83,7 @@ get_day_dataframe <- function(base_url, mail_urls)
   for (mail_id in mail_urls)
   {
     mail_url <- paste0(base_url, mail_id)
-    if(mail_url[length(mail_url)] == 't')
+    if (mail_url[length(mail_url)] == 't')
       return(0)
     page <- read_html(mail_url, options = "HUGE")
     mail <- page %>%
@@ -96,9 +97,9 @@ get_day_dataframe <- function(base_url, mail_urls)
     subj <- strapplyc(mail, "Subject:(.*?)\r\n", simplify = c) %>%
       str_remove_all(pattern = '\r') %>%
       str_remove_all(pattern = '\n')
-    email_text <- unlist(str_split(mail, fixed(paste0(subj,"\r\n"))))[2] %>%
+    email_text <- unlist(str_split(mail, fixed(paste0(subj, "\r\n"))))[2] %>%
       str_remove_all(pattern = '\r') %>%
-      str_replace_all(pattern = '\n',' ')
+      str_replace_all(pattern = '\n', ' ')
 
     day_df <- rbind(day_df, c(from, date, subj, email_text))
   }
@@ -130,7 +131,7 @@ for (y in min_years:max_years)  # for each year between 2004 and 2022
 
       # download page
       base_url <- paste0("https://www.419scam.org/emails/", y, "-", character0, m, '/', character1, d, "/")
-      index_url <- paste0(base_url,"index.htm")
+      index_url <- paste0(base_url, "index.htm")
 
       e <- FALSE
       # get email lists
@@ -142,7 +143,7 @@ for (y in min_years:max_years)  # for each year between 2004 and 2022
         next
       }
 
-      day_df <- get_day_dataframe(base_url,email_refs)
+      day_df <- get_day_dataframe(base_url, email_refs)
 
 
       year_df <- rbind(year_df, day_df)

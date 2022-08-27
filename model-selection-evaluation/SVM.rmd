@@ -51,12 +51,12 @@ repr <- as.data.frame(sumap$layout)
 plot_y <- sumap$config$y
 
 plot_y <- as.character(plot_y)
-plot_y[plot_y== 1] <- "scam"
+plot_y[plot_y == 1] <- "scam"
 plot_y[plot_y == 2] <- "not-scam"
 plot_y <- as.factor(plot_y)
 
-plot_ly(x=repr$V1, y=repr$V2, z=repr$V3, type="scatter3d", mode="markers",
-        color=plot_y)
+plot_ly(x = repr$V1, y = repr$V2, z = repr$V3, type = "scatter3d", mode = "markers",
+        color = plot_y)
 
 
 # 2D plot
@@ -364,7 +364,7 @@ df_only_significant <- readRDS("datasets/df_training_only_significant.rds")
 #
 # # less options because of computational times and max iterations
 # summary(tune.out)
-model_svm_p <- svm(y ~ ., data = df_only_significant, kernel = "polynomial",probability = TRUE, cost = 0.1, gamma = 3, coef0 = 0, degree = 1)
+model_svm_p <- svm(y ~ ., data = df_only_significant, kernel = "polynomial", probability = TRUE, cost = 0.1, gamma = 3, coef0 = 0, degree = 1)
 summary(model_svm_p)
 saveRDS(model_svm_p, file = "./model-selection-evaluation/Support_vector_machine_polynomial_only_significant.rds")
 ```
@@ -383,7 +383,7 @@ set.seed(0)
 # summary(tune.out)
 
 df_no_sentiment <- readRDS("datasets/df_training_no_sentiment.rds")
-model_svm_p <- svm(y ~ ., data = df_no_sentiment, probability = TRUE,kernel = "polynomial", cost = 0.1, gamma = 3, coef0 = 0, degree = 1)
+model_svm_p <- svm(y ~ ., data = df_no_sentiment, probability = TRUE, kernel = "polynomial", cost = 0.1, gamma = 3, coef0 = 0, degree = 1)
 summary(model_svm_p)
 saveRDS(model_svm_p, file = "./model-selection-evaluation/Support_vector_machine_polynomial_no_sentiment.rds")
 ```

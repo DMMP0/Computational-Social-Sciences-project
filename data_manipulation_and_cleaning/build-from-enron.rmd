@@ -40,7 +40,7 @@ enron_root_dir <- "datasets/non-scam/enron"
 directories <- list.dirs(path = enron_root_dir, full.names = TRUE, recursive = FALSE) # we only want the first one
 
 
-df <- data.frame(From='', Date='', Subject='', Text='')
+df <- data.frame(From = '', Date = '', Subject = '', Text = '')
 
 # triggers
 date_trigger <- "Date:"
@@ -87,15 +87,15 @@ for (directory in directories)
 
       # Get the first 3
       if (!text_started) {
-        if (str_detect(string = pl, pattern = paste0("(?<!.)",from_trigger, "(.*?)"))) {
+        if (str_detect(string = pl, pattern = paste0("(?<!.)", from_trigger, "(.*?)"))) {
           from <- str_replace(string = pl, pattern = fixed(from_trigger), replacement = '')
         }
         else {
-          if (str_detect(string = pl, pattern = paste0("(?<!.)",date_trigger,"(.*?)"))) {
+          if (str_detect(string = pl, pattern = paste0("(?<!.)", date_trigger, "(.*?)"))) {
             date <- str_replace(string = pl, pattern = fixed(date_trigger), replacement = '')
           }
           else {
-            if (str_detect(string = pl, pattern = paste0("(?<!.)",subject_trigger,"(.*?)"))) {
+            if (str_detect(string = pl, pattern = paste0("(?<!.)", subject_trigger, "(.*?)"))) {
               subject <- str_replace(string = pl, pattern = fixed(subject_trigger), replacement = '')
             }
           }

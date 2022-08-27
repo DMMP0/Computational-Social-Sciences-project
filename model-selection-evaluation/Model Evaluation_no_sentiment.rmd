@@ -20,7 +20,7 @@ results <- data.frame(Method = "None", AUC = 0, Sensitivity = 0, Specificity = 0
                       Precision = 0, Recall = 0, F1 = 0)
 
 df <- readRDS(file = "datasets/testing_df.rds")
-df <- df[,1:9]
+df <- df[, 1:9]
 kind <- "no_sentiment"
 ```
 
@@ -35,7 +35,7 @@ summary(model)
 # for lr we need a numerical y
 predictions <- predict(model, new_data = df, type = "class")
 simple_accuracy <- mean(predictions$.pred_class == df$y)
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions$.pred_class,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions$.pred_class, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 
 
@@ -66,7 +66,7 @@ ris <- data.frame(Method = "Logistic Regression", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 
 ```
 
@@ -78,12 +78,12 @@ model <- readRDS(file = "./model-selection-evaluation/KNN_no_sentiment.rds")
 
 # accuracy
 simple_accuracy <- augment(model, new_data = df) %>%
-accuracy(truth = y, estimate = factor(.pred_class, levels = c("scam","not-scam")))
+  accuracy(truth = y, estimate = factor(.pred_class, levels = c("scam", "not-scam")))
 
 
 predictions <- predict(model, new_data = df, type = "class")
 simple_accuracy <- mean(predictions$.pred_class == df$y)
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions$.pred_class,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions$.pred_class, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 
 
@@ -114,7 +114,7 @@ ris <- data.frame(Method = "KNN", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # LDA
@@ -127,14 +127,14 @@ predictions <- predict(model, df) # predictions
 simple_accuracy <- mean(predictions$class == df$y)
 
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions$class,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions$class, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions$class, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
 
 # ROC
 
-prob <- predictions$posterior[,2]
+prob <- predictions$posterior[, 2]
 
 predob <- ROCR::prediction(prob, df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
@@ -157,7 +157,7 @@ ris <- data.frame(Method = "LDA", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # Naive Bayes
@@ -170,7 +170,7 @@ predictions <- predict(model, df) # predictions
 simple_accuracy <- mean(predictions == df$y)
 
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -179,7 +179,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = 'raw')
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -200,7 +200,7 @@ ris <- data.frame(Method = "Naive Bayes", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 
@@ -212,7 +212,7 @@ predictions <- predict(model, df, type = "class") # predictions
 # accuracy
 simple_accuracy <- mean(predictions == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -221,7 +221,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -242,7 +242,7 @@ ris <- data.frame(Method = "Simple Tree", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 
 ```
 
@@ -254,7 +254,7 @@ predictions <- predict(model, df, type = "class") # predictions
 # accuracy
 simple_accuracy <- mean(predictions == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -263,7 +263,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df)
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -284,7 +284,7 @@ ris <- data.frame(Method = "Pruned Tree", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # Bagging
@@ -296,7 +296,7 @@ predictions <- predict(model, df, type = "class") # predictions
 # accuracy
 simple_accuracy <- mean(predictions == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -305,7 +305,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -326,7 +326,7 @@ ris <- data.frame(Method = "Bagging", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # Random Forests
@@ -338,7 +338,7 @@ predictions <- predict(model, df, type = "class") # predictions
 # accuracy
 simple_accuracy <- mean(predictions == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -347,7 +347,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 
 prob <- predict(model, df, type = "prob")
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -368,7 +368,7 @@ ris <- data.frame(Method = "Random Forest", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 
 ```
 
@@ -397,7 +397,7 @@ confusion_matrix <- confusionMatrix(confusion_matrix)
 
 prob <- predict(model, df_tree, type = "prob")
 
-predob <- ROCR::prediction(prob[,2], df_tree$y)
+predob <- ROCR::prediction(prob[, 2], df_tree$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -418,7 +418,7 @@ ris <- data.frame(Method = "Boosting", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 
@@ -430,7 +430,7 @@ predictions <- predict(model, df_tree, probability = TRUE) # predictions
 # accuracy
 simple_accuracy <- mean(unlist(predictions) == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -439,7 +439,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,2], df$y)
+predob <- ROCR::prediction(prob[, 2], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -460,7 +460,7 @@ ris <- data.frame(Method = "Maximal Margin Classifier", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # Support Vector Classifier
@@ -471,7 +471,7 @@ predictions <- predict(model, df_tree, probability = TRUE) # predictions
 # accuracy
 simple_accuracy <- mean(unlist(predictions) == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -480,7 +480,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[, 1], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -501,7 +501,7 @@ ris <- data.frame(Method = "Support Vector Classifier", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 # Support Vector Machine
@@ -514,7 +514,7 @@ predictions <- predict(model, df_tree, probability = TRUE) # predictions
 # accuracy
 simple_accuracy <- mean(unlist(predictions) == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -523,7 +523,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[, 1], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -544,7 +544,7 @@ ris <- data.frame(Method = "SVM radial", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 
@@ -555,7 +555,7 @@ predictions <- predict(model, df_tree, probability = TRUE) # predictions
 # accuracy
 simple_accuracy <- mean(unlist(predictions) == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -564,7 +564,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[, 1], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -585,7 +585,7 @@ ris <- data.frame(Method = "SVM Sigmoid", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 
@@ -596,7 +596,7 @@ predictions <- predict(model, df_tree, probability = TRUE) # predictions
 # accuracy
 simple_accuracy <- mean(unlist(predictions) == df$y)
 
-t <- table(factor(df$y, levels = c("scam","not-scam")), factor(predictions,levels = c("scam","not-scam")))
+t <- table(factor(df$y, levels = c("scam", "not-scam")), factor(predictions, levels = c("scam", "not-scam")))
 confusion_matrix <- caret::confusionMatrix(t)
 #confusion_matrix <- table(predictions, df$y)
 #confusion_matrix <- confusionMatrix(confusion_matrix)
@@ -605,7 +605,7 @@ confusion_matrix <- caret::confusionMatrix(t)
 predictions <- predict(model, df, probability = TRUE) # predictions
 prob <- as.data.frame(attr(predictions, "probabilities"))
 
-predob <- ROCR::prediction(prob[,1], df$y)
+predob <- ROCR::prediction(prob[, 1], df$y)
 perf <- ROCR::performance(predob, "tpr", "fpr")
 auc <- ROCR::performance(predob, measure = "auc")
 auc <- unlist(auc@y.values)
@@ -626,13 +626,13 @@ ris <- data.frame(Method = "SVM Polynomial", AUC = auc,
                   Recall = confusion_matrix$byClass["Recall"],
                   F1 = confusion_matrix$byClass["F1"])
 
-results <- rbind(results,ris)
+results <- rbind(results, ris)
 ```
 
 
 ```{r}
 results <- results[-1,]
-write.csv(results, file = paste0("Results_",kind,".csv"))
+write.csv(results, file = paste0("Results_", kind, ".csv"))
 results
 ```
 

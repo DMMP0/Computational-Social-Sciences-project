@@ -56,28 +56,29 @@ for (k in ks) {
 
 ```{r}
 ggplot(data.frame(k = ks, train = accsTR, val = accsTS), aes(x = ks, y = accsTR)) +
-    ylim(0, 1) +
+  ylim(0, 1) +
   labs(title = "Accuracies for  knn", x = "K", y = "Accuracy") +
-    geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
+  geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
   geom_line(aes(x = ks, y = accsTS, colour = "Validation"))
 ```
 
 
 ```{r}
 ggplot(data.frame(k = ks, train = accsTR, val = accsTS), aes(x = ks, y = accsTR)) +
-    ylim(0, 1) + xlim(1,10) +
+  ylim(0, 1) +
+  xlim(1, 10) +
   labs(title = "Zoomed accuracies for  knn", x = "K", y = "Accuracy") +
-    geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
+  geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
   geom_line(aes(x = ks, y = accsTS, colour = "Validation"))
 ```
 Ks 1 to 3 seems to be the best ones, but smells overfitting to me
 ```{r}
 knn_spec <- nearest_neighbor(neighbors = 5) %>%
-    set_mode("classification") %>%
-    set_engine("kknn")
-  # fit
+  set_mode("classification") %>%
+  set_engine("kknn")
+# fit
 model_knn <- knn_spec %>%
-    fit(y ~ ., data = df)
+  fit(y ~ ., data = df)
 saveRDS(model_knn, file = "model-selection-evaluation/KNN.rds")
 ```
 
@@ -110,19 +111,19 @@ for (k in ks) {
 }
 
 ggplot(data.frame(k = ks, train = accsTR, val = accsTS), aes(x = ks, y = accsTR)) +
-    ylim(0, 1) +
+  ylim(0, 1) +
   labs(title = "Accuracies for  knn", x = "K", y = "Accuracy") +
-    geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
+  geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
   geom_line(aes(x = ks, y = accsTS, colour = "Validation"))
 ```
 
 ```{r}
 knn_spec <- nearest_neighbor(neighbors = 5) %>%
-    set_mode("classification") %>%
-    set_engine("kknn")
-  # fit
+  set_mode("classification") %>%
+  set_engine("kknn")
+# fit
 model_knn <- knn_spec %>%
-    fit(y ~ ., data = df_only_significant)
+  fit(y ~ ., data = df_only_significant)
 saveRDS(model_knn, file = "model-selection-evaluation/KNN_only_significant.rds")
 ```
 
@@ -155,17 +156,17 @@ for (k in ks) {
 }
 
 ggplot(data.frame(k = ks, train = accsTR, val = accsTS), aes(x = ks, y = accsTR)) +
-    ylim(0, 1) +
+  ylim(0, 1) +
   labs(title = "Accuracies for  knn", x = "K", y = "Accuracy") +
-    geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
+  geom_line(aes(x = ks, y = accsTR, colour = "Training")) +
   geom_line(aes(x = ks, y = accsTS, colour = "Validation"))
 ```
 ```{r}
 knn_spec <- nearest_neighbor(neighbors = 5) %>%
-    set_mode("classification") %>%
-    set_engine("kknn")
-  # fit
+  set_mode("classification") %>%
+  set_engine("kknn")
+# fit
 model_knn <- knn_spec %>%
-    fit(y ~ ., data = df_no_sentiment)
+  fit(y ~ ., data = df_no_sentiment)
 saveRDS(model_knn, file = "model-selection-evaluation/KNN_no_sentiment.rds")
 ```

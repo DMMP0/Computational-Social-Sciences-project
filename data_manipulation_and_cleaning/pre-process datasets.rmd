@@ -145,7 +145,8 @@ date_approximated <- function(value = "18:00:28")
       ris <- as.integer(ris[1]) }
   },
     error = function(e) {
-      print("Error while reading")
+      print("Error while reading: ")
+      print(e, quote = TRUE)
     })
   if (is.numeric(ris)) {
     if (ris < 2000)

@@ -30,7 +30,7 @@ root_directories <- list.dirs(path = root_dir, full.names = TRUE, recursive = FA
 
 ## Triggers
 ```{r}
-df <- data.frame(From='', Date='', Subject='', Text='')
+df <- data.frame(From = '', Date = '', Subject = '', Text = '')
 
 # triggers
 date_trigger <- "Date:"
@@ -46,7 +46,7 @@ save_name <- "./datasets/scam/2/2022.csv" # done: 1998, 2020
 ```
 
 ```{r}
-df <- data.frame(From='', Date='', Subject='', Text='')
+df <- data.frame(From = '', Date = '', Subject = '', Text = '')
 
 
 for (directory in directories)
@@ -72,15 +72,15 @@ for (directory in directories)
 
       # Get the first 3
       if (!text_started) {
-        if (str_detect(string = pl, pattern = paste0("(?<!.)",from_trigger, "(.*?)"))) {
+        if (str_detect(string = pl, pattern = paste0("(?<!.)", from_trigger, "(.*?)"))) {
           from <- str_replace(string = pl, pattern = fixed(from_trigger), replacement = '')
         }
         else {
-          if (str_detect(string = pl, pattern = paste0("(?<!.)",date_trigger,"(.*?)"))) {
+          if (str_detect(string = pl, pattern = paste0("(?<!.)", date_trigger, "(.*?)"))) {
             date <- str_replace(string = pl, pattern = fixed(date_trigger), replacement = '')
           }
           else {
-            if (str_detect(string = pl, pattern = paste0("(?<!.)",subject_trigger,"(.*?)"))) {
+            if (str_detect(string = pl, pattern = paste0("(?<!.)", subject_trigger, "(.*?)"))) {
               subject <- str_replace(string = pl, pattern = fixed(subject_trigger), replacement = '')
             }
           }
